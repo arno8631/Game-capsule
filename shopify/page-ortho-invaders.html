@@ -81,7 +81,7 @@
     <div class="cj-steps">
       <div class="cj-step"><b>1</b>Créez votre compte praticien Capsule (30 secondes) ou connectez-vous.</div>
       <div class="cj-step"><b>2</b>Défendez les dents pendant 3 vagues, puis affrontez la Méga-Carie.</div>
-      <div class="cj-step"><b>3</b>Victoire : choisissez votre replay, votre code est créé à votre nom.</div>
+      <div class="cj-step"><b>3</b>Victoire : choisissez votre replay, l'équipe Capsule vous envoie votre code personnel.</div>
     </div>
   </section>
 
@@ -127,16 +127,17 @@
     </div>
 
     <div class="cj-game" id="cj-game" hidden>
-      <div id="capsule-arcade"><p class="cj-lead" style="text-align:center;margin:0 auto">Vous êtes connecté ✓ Le jeu se charge… S'il n'apparaît pas, il ouvrira pendant les Journées Orthodontie.</p></div>
+      <div id="capsule-arcade"><p class="cj-lead" style="text-align:center;margin:0 auto">Vous êtes connecté ✓ Le jeu se charge…</p></div>
     </div>
   </section>
 
-  <p class="cj-legal">Jeu gratuit sans obligation d'achat, organisé par Capsule à l'occasion des Journées Orthodontie. Un lot par compte, code à usage unique valable 60 jours. Voir le <a href="/pages/reglement-ortho-invaders-2026">règlement du jeu</a>. Vos données sont utilisées pour la gestion du jeu et, si vous l'acceptez, l'envoi d'informations Capsule.</p>
+  <p class="cj-legal">Jeu gratuit sans obligation d'achat, organisé par Capsule à l'occasion des Journées Orthodontie. Un lot par compte : code personnel à usage unique, lié à votre compte Capsule. Voir le <a href="/pages/reglement-ortho-invaders-2026">règlement du jeu</a>. Vos données sont utilisées pour la gestion du jeu et, si vous l'acceptez, l'envoi d'informations Capsule.</p>
 </div>
 
 <script>
 (function () {
-  var ARCADE_URL = 'https://arcade.capsule-med.com'; // ← adresse du serveur du jeu
+  // Fichier du jeu hébergé dans Shopify (Contenu › Fichiers) — aucun serveur externe
+  var GAME_URL = '__GAME_URL__';
   var cid = (window.ShopifyAnalytics && ShopifyAnalytics.meta && ShopifyAnalytics.meta.page && ShopifyAnalytics.meta.page.customerId) || (window.__st && __st.cid);
   var gate = document.getElementById('cj-gate');
   var game = document.getElementById('cj-game');
@@ -145,8 +146,7 @@
     game.hidden = false;
     document.getElementById('capsule-arcade').setAttribute('data-customer-id', cid);
     var s = document.createElement('script');
-    s.src = ARCADE_URL + '/embed.js';
-    s.defer = true;
+    s.src = GAME_URL;
     document.body.appendChild(s);
   }
   // La profession devient un tag client (segmentation Shopify)

@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "check": "node --check server.js && node --check src/rewards.js && node --check src/web.js && node --check public/embed.js && node --check src/config.js && node --check public/js/screen.js && node --check src/auth.js && node --check src/shopify.js && node --check src/store.js && node --check public/js/game.js && node --check public/js/controller.js && node --check public/js/sprites.js && node --check public/js/audio.js"
+    "check": "node tools/build-site.js && node --check shopify/ortho-invaders-site.js && node --check server.js && node --check src/rewards.js && node --check src/web.js && node --check public/embed.js && node --check src/config.js && node --check public/js/screen.js && node --check src/auth.js && node --check src/shopify.js && node --check src/store.js && node --check public/js/game.js && node --check public/js/controller.js && node --check public/js/sprites.js && node --check public/js/audio.js"
   },
   "engines": {
     "node": ">=20"
