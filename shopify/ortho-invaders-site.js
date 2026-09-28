@@ -2132,6 +2132,9 @@ window.__orthoInvadersGame = function () {
     if (qs.get('serveur')) localStorage.setItem('orthoRemote', JSON.stringify({ server: qs.get('serveur').replace(/\/$/, ''), key: qs.get('cle') || '' }));
     REMOTE = STAND ? JSON.parse(localStorage.getItem('orthoRemote') || 'null') : null;
   } catch {}
+  // Fonction de tag (Supabase capsule) : appelée sans clé, elle fait ses propres contrôles
+  // (origine capsule-med.com, identifiant numérique, tags jeuJO uniquement).
+  const TAG_URL = 'https://qyibpvgbxxdilaewiyys.supabase.co/functions/v1/ortho-jeu-tag';
   const RULES = root.dataset.rules || '/pages/reglements-jeux-jo-2025';
   const REWARDS = [
     { id: 'biomecanique', speaker: 'Dr Skander Ellouze', title: 'Replay Biomécanique : maîtriser les clés de l’excellence en orthodontie' },
@@ -2554,6 +2557,23 @@ window.__orthoInvadersGame = function () {
     document.body.appendChild(script);
     // Le son se débloque au premier toucher de l'équipe sur l'iPad
     root.addEventListener('pointerdown', () => { try { Sfx.unlock(); } catch {} }, { once: true });
+  }
+
+  // ── Tag Shopify de chaque praticien connecté à la borne (nouvel inscrit ou compte existant) ──
+  // Fonction Edge Supabase capsule « ortho-jeu-tag » : ajoute jeuJO, jeuJO-2026 et
+  // jeuJO-inscrit / jeuJO-compte-existant. Une fois par session d'onglet et par compte.
+  if (logged) {
+    const TAGGED_KEY = `orthoTagged:${customerId}`;
+    let done = false;
+    try { done = sessionStorage.getItem(TAGGED_KEY) === '1'; } catch {}
+    if (!done) {
+      fetch(TAG_URL, {
+        method: 'POST',
+        keepalive: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customer_id: String(customerId) }),
+      }).then((r) => { if (r.ok) { try { sessionStorage.setItem(TAGGED_KEY, '1'); } catch {} } }).catch(() => {});
+    }
   }
 
   if (!logged) {

@@ -80,3 +80,21 @@ sur la tablette : `…/pages/ortho-invaders?borne&local`.
 - Une partie par compte (liste « déjà joué » conservée sur le disque), sauf `TESTER_IDS` (identifiants clients Shopify, séparés par des virgules).
 - Un lot par compte, 30 lots au maximum (`MAX_PRIZES`), victoire refusée si la partie dure moins de 45 s.
 - Code : 100 % sur le replay choisi, 1 utilisation, réservé au compte du gagnant, valable 60 jours.
+
+---
+
+# Tags Shopify des joueurs (en place, sans serveur à héberger)
+
+Chaque praticien **connecté** sur la page du jeu est tagué, qu'il vienne de s'inscrire ou qu'il ait déjà un compte :
+
+| Tag | Qui |
+|---|---|
+| `jeuJO`, `jeuJO-2026` | tous les joueurs connectés |
+| `jeuJO-inscrit` | compte créé pour le jeu (posé par le formulaire d'inscription, confirmé par la fonction) |
+| `jeuJO-compte-existant` | praticien qui avait déjà un compte capsule |
+| profession (`Orthodontiste`, `Omnipraticien`…) | nouveaux inscrits (choix du formulaire) |
+
+Mécanisme : fonction Edge Supabase `ortho-jeu-tag` (projet capsule, source dans `supabase/functions/ortho-jeu-tag`),
+qui utilise le jeton Admin Shopify déjà configuré (`SHOPIFY_ADMIN_TOKEN`, besoin du droit `write_customers`).
+Suivi : table `ortho_jeu_joueurs` (statut nouveau/existant, visites, éventuelle erreur).
+Retrouver les joueurs : Shopify › Clients › filtre « Tag » = `jeuJO`.
