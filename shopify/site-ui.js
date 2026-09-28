@@ -114,15 +114,21 @@
   .ca-f .row{display:grid;grid-template-columns:1fr 1fr;gap:2.4cqw}
   .ca-f label.chk{display:flex;gap:2cqw;align-items:flex-start;font-family:'VT323',monospace;font-size:4cqw;line-height:1.05}
   .ca-f label.chk input{width:5cqw;height:5cqw;min-width:18px;min-height:18px;flex:none;accent-color:var(--m);padding:0}
-  .ca-pad{display:none;width:min(100%,560px);grid-template-columns:1fr 1fr 1.25fr;gap:12px;height:clamp(100px,15vh,170px);touch-action:none;user-select:none;-webkit-user-select:none}
+  .ca-pad{display:none;width:min(100%,420px);grid-template-columns:1fr 1fr 1.1fr;gap:10px;height:clamp(64px,9vh,110px);touch-action:none;user-select:none;-webkit-user-select:none}
   .ca.touch.logged .ca-pad{display:grid}
   .ca.touch .ca-keys{display:none}
   .ca-pad button{touch-action:none;border:0;color:#fff;font-family:'Press Start 2P',monospace;-webkit-tap-highlight-color:transparent}
-  .ca-dir{background:#1f0b4a;border:4px solid var(--c)!important;font-size:26px;box-shadow:0 5px 0 #178a8d}
+  .ca-dir{background:#1f0b4a;border:3px solid var(--c)!important;font-size:20px;box-shadow:0 4px 0 #178a8d}
   .ca-dir.down{background:#2a1566;transform:translateY(3px)}
-  .ca-fire{border-radius:50%;aspect-ratio:1;justify-self:center;height:100%;font-size:14px;
+  .ca-fire{border-radius:50%;aspect-ratio:1;justify-self:center;height:100%;font-size:11px;
     background:radial-gradient(circle at 35% 30%,#ff7ba3,var(--m) 55%,#8f0f3a);box-shadow:0 6px 0 #6d0a2c,0 0 24px var(--m)}
   .ca-fire.down{transform:translateY(4px)}
+  /* En partie : on libère un max de place pour l'écran de jeu */
+  .ca.playing{gap:.6vh}
+  .ca.playing .ca-bar{display:none}
+  .ca.playing .ca-head{gap:0;padding:max(.6vh,env(safe-area-inset-top)) 16px .6vh}
+  .ca.playing .ca-head .b,.ca.playing .ca-head .s,.ca.playing .ca-head::before{display:none}
+  .ca.playing .ca-head .t{font-size:clamp(12px,min(2.2vh,4vw),30px)}
   .ca-bar{display:flex;gap:6px 18px;justify-content:center;flex-wrap:wrap;align-items:center}
   .ca-bar a,.ca-bar span{font-family:'Press Start 2P',monospace;font-size:10px;color:#8f82b8;line-height:1.8}
   #capsule-arcade .ca-fs{font-family:'Press Start 2P',monospace;font-size:11px;line-height:1;color:#12062e;background:var(--c);border:0;
@@ -330,7 +336,10 @@
   }
 
   const overlays = ['ca-coin', 'ca-register', 'ca-login', 'ca-start', 'ca-end', 'ca-sent', 'ca-done', 'ca-pause', 'ca-r-attract', 'ca-r-ready', 'ca-r-winner', 'ca-r-off'];
-  const show = (id) => overlays.forEach((o) => { $(o).hidden = o !== id; });
+  const show = (id) => {
+    overlays.forEach((o) => { $(o).hidden = o !== id; });
+    root.querySelector('.ca').classList.toggle('playing', id === null || id === 'ca-pause');
+  };
   syncFs();
 
   root.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
