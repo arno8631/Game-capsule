@@ -5,6 +5,10 @@
 (function () {
   const root = document.getElementById('capsule-arcade');
   if (!root) return;
+  // La borne sort de la section du thème (calques, carrousels, transformations) et se place
+  // directement dans <body>, au-dessus de tout ; le reste du site est masqué (voir CSS).
+  document.body.appendChild(root);
+  document.documentElement.classList.add('ortho-borne');
   const customerId = root.dataset.customerId
     || window.ShopifyAnalytics?.meta?.page?.customerId
     || window.__st?.cid;
@@ -33,6 +37,8 @@
   document.head.appendChild(font);
 
   const css = `
+  html.ortho-borne body > *:not(#capsule-arcade):not(script):not(style):not(link){display:none!important}
+  html.ortho-borne, html.ortho-borne body{background:#05010f!important;overflow:hidden!important;height:100%!important;margin:0!important}
   #capsule-arcade{position:fixed!important;inset:0!important;z-index:2147483000;overflow:hidden;margin:0!important;padding:0!important;
     display:block!important;place-items:normal!important;min-height:0!important;border-radius:0!important;text-align:left!important;width:auto!important;height:auto!important;
     background:radial-gradient(ellipse at 50% 0%,rgba(157,78,221,.35),transparent 60%),linear-gradient(180deg,#0b0322,#05010f 70%)}
