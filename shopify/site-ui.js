@@ -22,7 +22,7 @@
 
   const font = document.createElement('link');
   font.rel = 'stylesheet';
-  font.href = 'https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap';
+  font.href = 'https://fonts.googleapis.com/css2?family=Pacifico&family=Press+Start+2P&family=VT323&display=swap';
   document.head.appendChild(font);
 
   const css = `
@@ -67,7 +67,23 @@
   .ca-fire.down{transform:translateY(4px)}
   .ca-keys{font-family:'Press Start 2P',monospace;font-size:10px;color:#8f82b8;margin:0;text-align:center;line-height:1.8}
   .ca-bar{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
-  .ca-bar a{font-family:'Press Start 2P',monospace;font-size:10px;color:#8f82b8}
+  .ca-bar a,.ca-bar button{font-family:'Press Start 2P',monospace;font-size:10px;color:#8f82b8;background:none;border:0;cursor:pointer;text-decoration:underline;padding:4px}
+  .ca-head{display:none}
+  /* ── Plein écran : le jeu recouvre toute la page (menu, pied de page, colonne du thème) ── */
+  #capsule-arcade.ca-full{position:fixed;inset:0;z-index:2147483000;overflow:hidden;
+    background:radial-gradient(ellipse at 50% 0%,rgba(157,78,221,.35),transparent 60%),linear-gradient(180deg,#0b0322,#05010f 70%)}
+  .ca-full .ca{height:100%;grid-template-rows:auto minmax(0,1fr) auto auto auto;gap:1.2vh;padding:0 16px max(1.2vh,env(safe-area-inset-bottom))}
+  .ca-full .ca-stage{height:100%;min-height:0}
+  .ca-full .ca-head{display:grid;justify-items:center;gap:.4vh;width:100vw;margin:0 -16px;padding:max(1.4vh,env(safe-area-inset-top)) 16px 1vh;
+    background:linear-gradient(180deg,#1a0544,#0b0322);border-bottom:3px solid var(--m);box-shadow:0 0 30px rgba(255,42,109,.5)}
+  .ca-head .b{font-family:'Press Start 2P',monospace;font-size:clamp(8px,1.3vh,14px);letter-spacing:.6em;padding:.45em .5em .45em 1.1em;
+    color:var(--c);border:2px solid var(--c);box-shadow:0 0 10px var(--c)}
+  .ca-head .t{font-family:'Press Start 2P',monospace;font-size:clamp(18px,min(4vh,6vw),56px);line-height:1;white-space:nowrap;
+    background:linear-gradient(180deg,#fff 0 42%,#bff7ff 50%,var(--c) 62%,#3a86ff);-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(.08em .08em 0 var(--m)) drop-shadow(0 0 .3em rgba(255,42,109,.7))}
+  .ca-head .s{font-family:'Pacifico',cursive;font-size:clamp(14px,min(2.3vh,4.4vw),32px);line-height:1.1;color:#ffd1f4;text-shadow:0 0 4px #f706cf,0 0 12px #f706cf}
+  .ca-enter{display:none}
+  #capsule-arcade:not(.ca-full) .ca-enter{display:block}
   `;
   const style = document.createElement('style');
   style.textContent = css;
@@ -75,6 +91,7 @@
 
   root.innerHTML = `
   <div class="ca">
+    <header class="ca-head"><span class="b">CAPSULE</span><span class="t">ORTHO INVADERS</span><span class="s">Défendez l'arcade dentaire !</span></header>
     <div class="ca-stage" data-fit>
       <div class="ca-screen">
         <canvas id="game" width="216" height="336" aria-label="Ortho Invaders"></canvas>
@@ -115,8 +132,23 @@
       <button class="ca-fire" id="ca-fire" aria-label="Tirer">TIR</button>
     </div>
     <p class="ca-keys">← → BOUGER · ESPACE TIRER · P PAUSE</p>
-    <div class="ca-bar"><a href="/account/logout?return_url=${encodeURIComponent(PAGE + '#jouer')}">▶ JOUEUR SUIVANT (SE DÉCONNECTER)</a></div>
+    <div class="ca-bar">
+      <button type="button" class="ca-enter" id="ca-enter">⛶ JOUER EN PLEIN ÉCRAN</button>
+      <button type="button" id="ca-exit">✕ LOTS &amp; RÈGLES</button>
+      <a href="/account/logout?return_url=${encodeURIComponent(PAGE + '#jouer')}">▶ JOUEUR SUIVANT (SE DÉCONNECTER)</a>
+    </div>
   </div>`;
+
+  // Plein écran : le jeu recouvre toute la page
+  function full(on) {
+    root.classList.toggle('ca-full', on);
+    document.documentElement.style.overflow = on ? 'hidden' : '';
+    document.body.style.overflow = on ? 'hidden' : '';
+    document.getElementById('ca-exit').hidden = !on;
+    if (!on) root.scrollIntoView({ block: 'start' });
+    window.Game?.fit?.();
+  }
+  full(true);
 
   // Le moteur de jeu cherche <canvas id="game"> : il démarre une fois la borne posée dans la page.
   window.__orthoInvadersGame();
@@ -187,6 +219,8 @@
     store.set(WON_KEY, reward.id);
   });
 
+  $('ca-enter').addEventListener('click', () => full(true));
+  $('ca-exit').addEventListener('click', () => { pause(); full(false); });
   $('ca-play').addEventListener('click', play);
   $('ca-again').addEventListener('click', play);
   $('ca-again2').addEventListener('click', play);

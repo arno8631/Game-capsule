@@ -1,6 +1,12 @@
 <!-- Page Shopify : capsule-med.com/pages/ortho-invaders
      Contenu HTML de la page (Boutique en ligne > Pages), modèle de thème « inscription-test » (section page-content). À la fin : ARCADE_URL = adresse du serveur du jeu. -->
 <style>
+/* Pleine largeur : sortir de la colonne de 680 px du thème et masquer son titre en doublon */
+body:has(#cj){overflow-x:hidden}
+.page-content:has(#cj){margin-top:0!important;margin-bottom:0!important;padding-left:0!important;padding-right:0!important}
+.page-content:has(#cj) > h1{display:none}
+.page-content:has(#cj) > div:has(#cj){max-width:none!important;margin-top:0!important}
+#cj{width:100vw;margin-left:calc(50% - 50vw);border-radius:0!important;min-height:100vh}
 #cj{--c:#2de2e6;--m:#ff2a6d;--y:#ffd319;--v:#9d4edd;--bg:#12062e;--bg2:#1f0b4a;--ink:#f5f3ff;--dim:#c9bdf0;
   background:radial-gradient(ellipse at 50% 0%,#3b0f6b 0%,#12062e 55%,#05010f 100%);color:var(--ink);
   font-family:inherit;border-radius:18px;padding:clamp(20px,4vw,48px) 16px;overflow:hidden;display:grid;gap:clamp(28px,5vw,56px)}
