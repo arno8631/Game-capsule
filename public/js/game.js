@@ -117,6 +117,7 @@
   let g = null;           // partie en cours
   let mode = 'attract';   // attract | intro | play | banner | over
   let session = null;     // { gameId, name, onEnd, onFeedback }
+  let paused = false;
   let time = 0;
   let lastHud = '';
   const stars = Array.from({ length: 70 }, () => ({ x: Math.random() * W, y: Math.random() * 120, s: Math.random() }));
@@ -656,13 +657,18 @@
   function loop(now) {
     const dt = Math.min(1 / 30, (now - last) / 1000);
     last = now;
-    update(dt);
+    if (!paused) update(dt);
     drawBackground();
     if (mode === 'attract' || !g) drawAttract();
     else {
       drawEntities();
       drawHud();
       drawOverlayText();
+      if (paused) {
+        ctx.fillStyle = 'rgba(18, 6, 46, 0.7)';
+        ctx.fillRect(0, 0, W, H);
+        text('PAUSE', W / 2, 90, { size: 16, color: '#ffd319' });
+      }
     }
     requestAnimationFrame(loop);
   }
@@ -672,6 +678,7 @@
   window.Game = {
     start(opts = {}) {
       session = opts;
+      paused = false;
       remote.x = 0;
       remote.fire = false;
       lastHud = '';
@@ -689,6 +696,8 @@
       remote.fire = state.fire;
     },
     get mode() { return mode; },
+    get paused() { return paused; },
+    set paused(v) { paused = Boolean(v) && Boolean(g) && mode !== 'attract'; },
   };
 
   // Test de recette (/screen?debug) : forcer la fin de partie.
