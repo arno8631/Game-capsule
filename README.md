@@ -93,12 +93,13 @@ Les lots sont configurés dans `src/config.js` :
 
 ## Version site capsule-med.com (sans serveur) — recommandée
 
-Le jeu tourne **entièrement sur le site Capsule** : page `capsule-med.com/pages/ortho-invaders`
-(modèle de thème `inscription-test`), avec les formulaires natifs d'inscription et de connexion.
+La page `capsule-med.com/pages/ortho-invaders` (modèle `inscription-test`) **est la borne d'arcade** :
+plein écran dès l'ouverture, « INSERT COIN », puis inscription ou connexion Capsule **dans l'écran de la borne**
+(formulaires natifs Shopify), et le jeu démarre. Fichier du jeu : Contenu › Fichiers › `ortho-invaders-borne-v3.js`.
 
 | Étape | Ce qui se passe |
 |---|---|
-| Visiteur non connecté | Voit les lots, les règles, « Créer mon compte praticien » (profession demandée) ou « Me connecter ». |
+| Visiteur non connecté | La borne affiche « INSERT COIN », les lots, puis « Créer mon compte et jouer » (profession demandée) ou « J'ai déjà un compte ». Liens directs : `#inscription`, `#connexion`. |
 | Inscription | Compte Capsule créé par Shopify avec les tags `jeuJO`, `jeuJO-2026`, `jeuJO-inscrit` + profession. |
 | Connecté | Le jeu s'affiche dans la page (clavier, ou boutons tactiles sur tablette / mobile). |
 | Victoire | Le gagnant choisit son replay et confirme son email → **formulaire de contact Shopify** → email à info@capsule-med.com (compte client, score, durée, replay). |
