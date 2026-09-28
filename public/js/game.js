@@ -749,65 +749,136 @@
     g.powerups = g.powerups.filter((u) => !u.dead && u.y < GUM_Y);
   }
 
-  // ── Décor pré-rendu ──────────────────────────────────────
+  // ── Décor pré-rendu : un cabinet dentaire en pixel art, ambiance néon ──
+  const LAMP = { x: 152, y: 58 };        // scialytique (lampe opératoire)
+  const MONITOR = { x: 170, y: 92, w: 36, h: 22 };
   const bg = (() => {
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     const c = cv.getContext('2d');
-    const sky = c.createLinearGradient(0, 0, 0, HORIZON);
-    sky.addColorStop(0, '#06011a');
-    sky.addColorStop(0.55, '#1a0544');
-    sky.addColorStop(0.85, '#3d0a5c');
-    sky.addColorStop(1, '#7a1060');
-    c.fillStyle = sky;
+    const r = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
+
+    // Mur carrelé
+    const wall = c.createLinearGradient(0, 0, 0, HORIZON);
+    wall.addColorStop(0, '#120630');
+    wall.addColorStop(1, '#241050');
+    c.fillStyle = wall;
     c.fillRect(0, 0, W, HORIZON);
-    // Soleil rétro rayé
-    const cx = W / 2, cy = HORIZON - 4, r = 44;
-    for (let y = -r; y < 0; y++) {
-      const band = (y + r) / r; // 0 en haut, 1 à l'horizon
-      const gap = band > 0.45 && ((-y) % 7 < Math.floor(band * 4));
-      if (gap) continue;
-      const half = Math.floor(Math.sqrt(r * r - y * y));
-      const col = band < 0.35 ? '#ffd319' : band < 0.6 ? '#ff901f' : band < 0.8 ? '#ff5a4f' : '#ff2a6d';
-      c.fillStyle = col;
-      c.fillRect(cx - half, cy + y, half * 2, 1);
+    for (let y = 22; y < HORIZON; y += 12) r(0, y, W, 1, 'rgba(90, 60, 170, 0.22)');
+    for (let row = 0, y = 22; y < HORIZON; y += 12, row++) {
+      for (let x = (row % 2) * 6; x < W; x += 12) r(x, y, 1, 12, 'rgba(90, 60, 170, 0.16)');
     }
-    // Montagnes pixel
-    let h1 = 10, h2 = 6;
-    for (let x = 0; x < W; x++) {
-      h1 += (Math.sin(x * 0.13) + Math.sin(x * 0.051) * 1.6 + (Math.random() - 0.5)) * 0.9;
-      h1 = Math.max(4, Math.min(26, h1));
-      h2 = 6 + Math.abs(Math.sin(x * 0.09)) * 12 + Math.sin(x * 0.31) * 2;
-      const far = Math.round(h1);
-      c.fillStyle = '#2a0b55';
-      c.fillRect(x, HORIZON - far, 1, far);
-      c.fillStyle = '#9d4edd';
-      c.fillRect(x, HORIZON - far, 1, 1);
-      if (x < 70 || x > W - 70) {
-        const near = Math.round(h2 * (x < 70 ? (70 - x) / 70 : (x - (W - 70)) / 70) * 1.6);
-        c.fillStyle = '#16063a';
-        c.fillRect(x, HORIZON - near, 1, near);
-        c.fillStyle = '#2de2e6';
-        if (near > 1) c.fillRect(x, HORIZON - near, 1, 1);
+    // Plinthe / cimaise
+    r(0, 158, W, 3, '#3a1f6e');
+    r(0, 158, W, 1, '#6b4bb8');
+    // Tube néon au plafond
+    r(18, 16, W - 36, 2, '#7ff9ff');
+    r(18, 18, W - 36, 1, '#1f8f98');
+
+    // Enseigne néon « CAPSULE »
+    const sign = renderText('CAPSULE', { color: '#ff5fa2', shadow: '#5a0b3a' });
+    c.drawImage(sign, Math.round(W / 2 - sign.width / 2), 23);
+
+    // Négatoscope avec panoramique dentaire (mur gauche)
+    r(6, 94, 54, 38, '#12062e');
+    r(7, 95, 52, 36, '#6c6c80');
+    r(9, 97, 48, 32, '#0d2a3a');
+    for (let i = 0; i < 14; i++) {           // arcade du haut
+      const x = 12 + i * 3, y = 104 + Math.round(Math.pow((i - 6.5) / 6.5, 2) * 5);
+      r(x, y, 2, 5, '#bfeaff');
+      r(x, y + 5, 2, 2, '#5aa9c9');
+    }
+    for (let i = 0; i < 14; i++) {           // arcade du bas
+      const x = 12 + i * 3, y = 122 - Math.round(Math.pow((i - 6.5) / 6.5, 2) * 5);
+      r(x, y - 5, 2, 5, '#bfeaff');
+      r(x, y - 7, 2, 2, '#5aa9c9');
+    }
+    r(9, 97, 48, 1, 'rgba(255,255,255,0.35)');
+    // Diplôme
+    r(10, 60, 26, 20, '#d9a441');
+    r(12, 62, 22, 16, '#f5ecd2');
+    for (let i = 0; i < 4; i++) r(15, 65 + i * 3, 16 - (i % 2) * 5, 1, '#8a7a5a');
+    r(28, 73, 4, 4, '#c2185b');
+
+    // Moniteur (tracé animé plus tard)
+    const M = MONITOR;
+    r(M.x - 1, M.y - 1, M.w + 2, M.h + 2, '#12062e');
+    r(M.x, M.y, M.w, M.h, '#3b3b52');
+    r(M.x + 2, M.y + 2, M.w - 4, M.h - 4, '#04160c');
+    r(M.x + M.w / 2 - 2, M.y + M.h, 4, 4, '#3b3b52');
+
+    // Meuble à tiroirs + plan de travail (droite)
+    r(160, 132, 52, 74, '#2f2360');
+    r(160, 132, 52, 3, '#8f82c8');
+    for (let i = 0; i < 4; i++) {
+      r(163, 139 + i * 16, 46, 14, '#3b2d78');
+      r(163, 139 + i * 16, 46, 1, '#5a4aa0');
+      r(182, 145 + i * 16, 8, 2, '#2de2e6');
+    }
+    // Flacons sur le plan de travail
+    r(166, 124, 5, 8, '#7ff9ff'); r(167, 122, 3, 2, '#e0e0f0');
+    r(174, 126, 5, 6, '#ffd319'); r(175, 124, 3, 2, '#e0e0f0');
+    r(198, 120, 8, 12, '#e8e8f5'); r(199, 118, 6, 2, '#c2185b');
+
+    // Scialytique : bras depuis le plafond + tête de lampe
+    r(LAMP.x + 10, 18, 2, 26, '#8f82c8');
+    r(LAMP.x - 2, 42, 16, 2, '#8f82c8');
+    r(LAMP.x - 2, 42, 2, 12, '#8f82c8');
+    r(LAMP.x - 14, 54, 30, 8, '#12062e');
+    r(LAMP.x - 13, 55, 28, 6, '#b8b8d0');
+    r(LAMP.x - 10, 61, 22, 2, '#fff6c2');
+
+    // Fauteuil dentaire (centre) : dossier incliné, assise, repose-jambes, socle
+    const K = '#12062e', SEAT = '#b3124a', SEAT_HI = '#ff5fa2', SEAT_DK = '#6d0a2c';
+    c.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    c.beginPath(); c.ellipse(104, 206, 44, 5, 0, 0, Math.PI * 2); c.fill();            // ombre au sol
+    r(94, 186, 24, 20, K); r(96, 186, 20, 20, '#6c6c80'); r(96, 186, 3, 20, '#9a9ab4'); // pied
+    r(84, 202, 44, 4, K); r(85, 203, 42, 3, '#4a4a60');                                 // socle
+    const chair = (x, top, h) => { r(x, top - 1, 1, h + 2, K); r(x, top, 1, h, SEAT); r(x, top, 1, 1, SEAT_HI); r(x, top + h - 2, 1, 2, SEAT_DK); };
+    for (let x = 64; x <= 122; x++) chair(x, 176, 12);                                 // assise
+    for (let x = 123; x <= 156; x++) chair(x, 176 + Math.round((x - 123) * 0.42), 10);  // repose-jambes
+    for (let y = 136; y <= 178; y++) {                                                  // dossier
+      const x0 = Math.round(44 + (y - 136) * 0.5);
+      r(x0 - 1, y, 20, 1, K); r(x0, y, 18, 1, SEAT); r(x0, y, 2, 1, SEAT_HI); r(x0 + 15, y, 3, 1, SEAT_DK);
+    }
+    r(38, 126, 20, 11, K); r(39, 127, 18, 9, SEAT); r(39, 127, 18, 2, SEAT_HI);          // têtière
+    r(110, 166, 3, 11, '#4a4a60'); r(98, 164, 26, 3, K); r(99, 165, 24, 2, '#8f82c8');   // accoudoir
+    // Crachoir
+    r(28, 164, 14, 4, K); r(29, 164, 12, 3, '#7ff9ff'); r(33, 168, 4, 22, '#4a4a60');
+    // Plateau d'instruments sur bras articulé
+    r(118, 150, 2, 18, '#8f82c8'); r(104, 146, 34, 5, K); r(105, 147, 32, 3, '#c8c8d8');
+    r(108, 144, 1, 3, '#ffffff'); r(107, 143, 3, 2, '#bfeaff');                     // miroir
+    r(114, 143, 1, 4, '#ffffff'); r(115, 143, 2, 1, '#ffffff');                     // sonde
+    r(121, 143, 1, 4, '#ffffff'); r(123, 143, 1, 4, '#ffffff'); r(122, 145, 1, 1, '#ffffff'); // précelles
+    r(128, 144, 6, 2, '#2de2e6');                                                    // porte-instruments
+
+    // Plante (gauche)
+    r(8, 188, 16, 18, K); r(9, 189, 14, 17, '#c46a2a'); r(9, 189, 14, 2, '#e08a3a');
+    for (const [x, y, w] of [[12, 176, 3], [7, 180, 5], [17, 178, 5], [10, 172, 2], [19, 172, 2], [14, 170, 2]]) r(x, y, w, 10, '#1f9e3a');
+    for (const [x, y] of [[12, 176], [8, 180], [18, 178], [14, 170]]) r(x, y, 2, 2, '#7dff5c');
+
+    // Sol : carrelage en damier, en perspective
+    const img = c.getImageData(0, HORIZON, W, GUM_Y - HORIZON);
+    const hFloor = GUM_Y - HORIZON;
+    for (let y = 0; y < hFloor; y++) {
+      const k = y / hFloor;
+      const row = Math.floor(Math.pow(k, 0.55) * 9);
+      const scale = 7 + k * 26;
+      for (let x = 0; x < W; x++) {
+        const col = Math.floor((x - W / 2) / scale + 100);
+        const dark = (row + col) % 2 === 0;
+        const i = (y * W + x) * 4;
+        const shade = 0.55 + k * 0.45;
+        const [cr, cg, cb] = dark ? [34, 16, 74] : [58, 36, 110];
+        img.data[i] = cr * shade; img.data[i + 1] = cg * shade; img.data[i + 2] = cb * shade; img.data[i + 3] = 255;
       }
     }
-    // Sol : dégradé + lignes de fuite fixes
-    const floor = c.createLinearGradient(0, HORIZON, 0, GUM_Y);
-    floor.addColorStop(0, '#2a0648');
-    floor.addColorStop(1, '#0b0220');
-    c.fillStyle = floor;
-    c.fillRect(0, HORIZON, W, GUM_Y - HORIZON);
-    c.fillStyle = '#ff2a6d';
-    c.fillRect(0, HORIZON, W, 1);
-    for (let i = -14; i <= 14; i++) {
-      for (let y = HORIZON + 1; y < GUM_Y; y++) {
-        const k = (y - HORIZON) / (GUM_Y - HORIZON);
-        const x = Math.round(W / 2 + i * (4 + k * 34));
-        if (x < 0 || x >= W) continue;
-        c.fillStyle = `rgba(247, 6, 207, ${0.25 + k * 0.4})`;
-        c.fillRect(x, y, 1, 1);
-      }
-    }
+    c.putImageData(img, 0, HORIZON);
+    r(0, HORIZON, W, 1, '#ff2a6d');
+
+    // Voile sombre : le décor reste lisible sans gêner le jeu
+    r(0, 0, W, GUM_Y, 'rgba(8, 2, 28, 0.38)');
+
     // Gencive + arcade du bas avec bagues et fil orthodontique
     const gum = c.createLinearGradient(0, GUM_Y, 0, H);
     gum.addColorStop(0, '#ff5fa2');
@@ -830,28 +901,34 @@
 
   function drawBackground() {
     ctx.drawImage(bg, 0, 0);
+    // Tracé cardiaque sur le moniteur
+    const M = MONITOR;
+    const pw = M.w - 4, ph = M.h - 4;
+    for (let i = 0; i < pw; i++) {
+      const t = (i + Math.floor(time * 24)) % 40;
+      const y = t === 18 ? -6 : t === 19 ? 5 : t === 20 ? -2 : 0;
+      const fade = i / pw;
+      ctx.fillStyle = `rgba(125, 255, 92, ${0.25 + fade * 0.6})`;
+      ctx.fillRect(M.x + 2 + i, M.y + 2 + ph / 2 + y, 1, 1);
+    }
+    // Poussière qui flotte dans la lumière du scialytique
     for (const s of stars) {
-      const tw = Math.sin(time * 3 + s.tw) > 0.6;
-      ctx.fillStyle = s.layer === 2 ? (tw ? '#ffffff' : '#bfb4ff') : s.layer === 1 ? '#8a6fd6' : '#4b3494';
-      ctx.fillRect(Math.floor(s.x), Math.floor(s.y), 1, 1);
-      if (s.layer === 2 && tw) {
-        ctx.fillStyle = 'rgba(191,180,255,0.5)';
-        ctx.fillRect(Math.floor(s.x) - 1, Math.floor(s.y), 3, 1);
-        ctx.fillRect(Math.floor(s.x), Math.floor(s.y) - 1, 1, 3);
-      }
+      if (s.layer !== 2) continue;
+      const x = LAMP.x - 30 + ((s.x * 0.3 + time * 2) % 60);
+      const y = 70 + (s.y % 90);
+      ctx.fillStyle = 'rgba(255, 246, 194, 0.35)';
+      ctx.fillRect(Math.floor(x), Math.floor(y), 1, 1);
     }
-    // Lignes horizontales du sol qui défilent
-    const off = (time * 0.55) % 1;
-    for (let i = 0; i < 10; i++) {
-      const k = Math.pow((i + off) / 10, 2.2);
-      const y = Math.floor(HORIZON + 1 + k * (GUM_Y - HORIZON - 2));
-      ctx.fillStyle = `rgba(247, 6, 207, ${0.2 + k * 0.55})`;
-      ctx.fillRect(0, y, W, 1);
-    }
-    // Pulsation du soleil
     ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = 0.18 + 0.06 * Math.sin(time * 1.5);
-    ctx.drawImage(S.glow.yellow, W / 2 - 60, HORIZON - 80, 120, 110);
+    // Faisceau du scialytique
+    ctx.globalAlpha = 0.16 + 0.03 * Math.sin(time * 2);
+    ctx.drawImage(S.glow.yellow, LAMP.x - 50, LAMP.y - 4, 96, 150);
+    // Tube néon (vacille de temps en temps) et enseigne CAPSULE
+    const flicker = Math.sin(time * 37) > 0.97 ? 0.1 : 0.35;
+    ctx.globalAlpha = flicker;
+    ctx.drawImage(S.glow.cyan, 10, 8, W - 20, 20);
+    ctx.globalAlpha = 0.22 + 0.08 * Math.sin(time * 3);
+    ctx.drawImage(S.glow.magenta, W / 2 - 34, 16, 68, 22);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
   }
