@@ -1,0 +1,85 @@
+/* Borne verticale (tablette portrait) : fronton, écran cathodique, bandeau de commande. */
+.cabinet {
+  height: 100dvh; width: 100%;
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  justify-items: center;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(157, 78, 221, .35), transparent 60%),
+    linear-gradient(180deg, #0b0322, #05010f 70%);
+  overflow: hidden;
+}
+
+/* ── Fronton lumineux ── */
+.marquee-top {
+  position: relative; width: 100%;
+  padding: 1.6vh 16px 1.2vh;
+  display: grid; justify-items: center; gap: .6vh;
+  background: linear-gradient(180deg, #1a0544 0%, #0b0322 100%);
+  border-bottom: 3px solid var(--capsule-primary);
+  box-shadow: 0 0 30px color-mix(in srgb, var(--capsule-primary) 60%, transparent), inset 0 -20px 40px rgba(255, 42, 109, .15);
+  overflow: hidden;
+  isolation: isolate;
+}
+.marquee-top::before { /* soleil rayé derrière le titre */
+  content: ''; position: absolute; z-index: -1; left: 50%; bottom: -34%;
+  width: min(58vw, 30vh); aspect-ratio: 1; transform: translateX(-50%); border-radius: 50%;
+  background: linear-gradient(180deg, var(--capsule-accent), var(--orange) 45%, var(--capsule-primary) 80%);
+  -webkit-mask: repeating-linear-gradient(180deg, #000 0 9%, transparent 9% 11%);
+  mask: repeating-linear-gradient(180deg, #000 0 9%, transparent 9% 11%);
+  opacity: .55;
+}
+.marquee-top::after { /* grille au sol */
+  content: ''; position: absolute; z-index: -1; left: -30%; right: -30%; bottom: 0; height: 35%;
+  background:
+    linear-gradient(transparent 0 90%, rgba(247, 6, 207, .6) 90%) 0 0 / 100% 12px,
+    linear-gradient(90deg, transparent 0 94%, rgba(247, 6, 207, .6) 94%) 0 0 / 28px 100%;
+  transform: perspective(120px) rotateX(55deg); transform-origin: bottom;
+}
+.marquee-top .brand {
+  font-family: var(--pixel); font-size: clamp(9px, 1.5vh, 18px); letter-spacing: .6em; padding: .45em .6em .45em 1.2em;
+  color: var(--capsule-secondary); border: 2px solid var(--capsule-secondary);
+  box-shadow: 0 0 10px var(--capsule-secondary), inset 0 0 10px rgba(45, 226, 230, .4);
+  background: rgba(6, 1, 26, .6);
+}
+.marquee-top .title {
+  font-family: var(--pixel); font-size: clamp(18px, min(4.4vh, 6.2vw), 64px); line-height: 1; text-align: center; white-space: nowrap;
+  background: linear-gradient(180deg, #fff 0%, #fff 42%, #bff7ff 50%, var(--capsule-secondary) 62%, #3a86ff 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0.08em 0.08em 0 var(--capsule-primary)) drop-shadow(0 0 .3em rgba(255, 42, 109, .7));
+}
+.marquee-top .script {
+  font-family: 'Pacifico', cursive; font-size: clamp(16px, min(2.6vh, 4.6vw), 38px); line-height: 1.1; color: #ffd1f4;
+  text-shadow: 0 0 4px #f706cf, 0 0 12px #f706cf, 0 0 26px #f706cf;
+  animation: neon 6s infinite;
+}
+@keyframes neon { 0%, 18%, 22%, 62%, 64%, 100% { opacity: 1; } 20%, 63% { opacity: .35; } }
+
+/* ── Écran ── */
+.stage { width: 100%; min-height: 0; display: grid; place-items: center; padding: 1.2vh 16px; }
+.screen-box {
+  position: relative; display: block; line-height: 0;
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 0 0 3px #05010f, 0 0 0 6px var(--violet), 0 0 36px rgba(157, 78, 221, .6), 0 0 90px rgba(255, 42, 109, .25);
+}
+.screen-box canvas {
+  display: block; image-rendering: pixelated; image-rendering: crisp-edges;
+  filter: saturate(1.15) contrast(1.05);
+}
+.screen-box .crt { position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background:
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, .28) 0 calc(var(--px, 4px) * .32), transparent calc(var(--px, 4px) * .32) var(--px, 4px)),
+    radial-gradient(ellipse at 50% 50%, transparent 60%, rgba(0, 0, 0, .55) 100%);
+  mix-blend-mode: multiply;
+}
+.screen-box .crt::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255, 255, 255, .05), transparent 30%); }
+.screen-box .overlay { z-index: 2; line-height: normal; container-type: inline-size; }
+
+/* ── Bandeau de commande ── */
+.deck {
+  width: 100%; padding: 1vh 16px calc(1vh + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, #0b0322, #1a0544);
+  border-top: 3px solid var(--capsule-secondary);
+  box-shadow: 0 0 30px rgba(45, 226, 230, .35);
+}
+
+@media (prefers-reduced-motion: reduce) { .marquee-top .script { animation: none; } }

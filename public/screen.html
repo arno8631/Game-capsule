@@ -2,149 +2,144 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Ortho Invaders · Capsule</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/fonts/press-start-2p/index.css">
   <link rel="stylesheet" href="/fonts/vt323/index.css">
   <link rel="stylesheet" href="/fonts/pacifico/index.css">
   <link rel="stylesheet" href="/css/arcade.css">
+  <link rel="stylesheet" href="/css/cabinet.css">
   <style>
-    body { overflow: hidden; display: grid; place-items: center; background: #05010f; cursor: none; }
+    body { overflow: hidden; background: #05010f; cursor: none; }
     body.show-cursor { cursor: default; }
-    #game { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
 
     .overlay {
-      position: fixed; inset: 0; display: none;
+      position: absolute; inset: 0; display: none;
       align-items: center; justify-content: center;
-      background: rgba(10, 3, 30, .72);
-      backdrop-filter: blur(2px);
+      background: rgba(8, 2, 28, .82);
+      padding: 5%;
     }
     .overlay.on { display: flex; }
+    .stack { width: 100%; display: grid; gap: 3.6cqw; justify-items: center; text-align: center; }
+    .page { display: none; }
+    .page.on { display: grid; animation: pagein .5s steps(5); }
+    @keyframes pagein { from { opacity: 0; transform: translateY(4cqw); } }
 
-    /* Accueil */
-    #attract .wrap {
-      display: grid; grid-template-columns: 1.1fr 1fr; gap: 3vw;
-      width: min(92vw, 170vh); align-items: center;
-    }
-    #attract .logo { font-size: clamp(28px, 5.4vw, 96px); }
-    .scan { display: flex; gap: 2vw; align-items: center; margin-top: 3vh; justify-content: center; }
-    .scan img { width: clamp(140px, 17vw, 320px); image-rendering: pixelated; border: 6px solid #fff; box-shadow: 0 0 0 4px var(--capsule-primary), 0 0 40px var(--capsule-primary); }
-    .scan .how { font-family: var(--pixel); font-size: clamp(10px, 1.1vw, 20px); line-height: 2; }
-    .scan .how b { color: var(--capsule-accent); font-weight: normal; }
-    .scan .code { color: var(--capsule-secondary); font-size: 1.6em; letter-spacing: .2em; }
-
-    .side { display: grid; gap: 2vh; }
-    .side h2 { font-family: var(--pixel); font-size: clamp(10px, 1vw, 18px); margin: 0 0 1.2vh; color: var(--capsule-secondary); text-transform: uppercase; }
-    .prizes { display: grid; grid-template-columns: 1fr 1fr; gap: 1vw; }
-    .prize { background: var(--bg); border: 2px solid var(--capsule-primary); padding: .6vw; text-align: center; }
-    .prize img { width: 100%; aspect-ratio: 16/10; object-fit: cover; image-rendering: auto; display: block; margin-bottom: .6vh; background: var(--bg-2); }
-    .prize .who { font-family: var(--pixel); font-size: clamp(8px, .75vw, 14px); color: var(--capsule-accent); }
-    .prize .what { font-size: clamp(16px, 1.3vw, 26px); line-height: 1.05; margin-top: .4vh; }
-    .left-count { font-family: var(--pixel); font-size: clamp(8px, .8vw, 14px); margin-top: 1.2vh; text-align: center; }
+    /* Accueil (attract) */
+    .call { font-family: var(--pixel); font-size: 5.4cqw; color: var(--capsule-accent); text-shadow: .15em .15em 0 var(--capsule-primary); line-height: 1.3; }
+    .qr-wrap { display: grid; justify-items: center; gap: 2cqw; }
+    .qr-wrap img { width: 56cqw; image-rendering: pixelated; border: 2cqw solid #fff; box-shadow: 0 0 0 1cqw var(--capsule-primary), 0 0 8cqw var(--capsule-primary); }
+    .code { font-family: var(--pixel); font-size: 3.4cqw; color: var(--ink-dim); }
+    .code b { color: var(--capsule-secondary); font-weight: normal; letter-spacing: .3em; }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2cqw; width: 100%; }
+    .step { border: 2px solid var(--violet); background: rgba(31, 11, 74, .8); padding: 2.4cqw 1.6cqw; font-size: 4.2cqw; line-height: 1; }
+    .step b { display: block; font-family: var(--pixel); font-weight: normal; font-size: 4cqw; color: var(--capsule-accent); margin-bottom: 1.4cqw; }
+    h2 { font-family: var(--pixel); font-weight: normal; font-size: 3.6cqw; line-height: 1.6; color: var(--capsule-secondary); margin: 0; letter-spacing: .05em; }
+    .prizes { display: grid; grid-template-columns: 1fr 1fr; gap: 2.4cqw; width: 100%; }
+    .prize { background: #12062e; border: 2px solid var(--capsule-primary); padding: 1.6cqw; text-align: left; line-height: 1; }
+    .prize img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; margin-bottom: 1.4cqw; background: linear-gradient(135deg, #2a0b55, #12062e); }
+    .prize .who { font-family: var(--pixel); font-size: 2.5cqw; color: var(--capsule-accent); line-height: 1.4; }
+    .prize .what { font-size: 4cqw; line-height: .95; margin-top: .8cqw; }
+    .left-count { font-family: var(--pixel); font-size: 2.8cqw; }
     .left-count b { color: var(--capsule-accent); font-weight: normal; }
-
-    ol.board { margin: 0; padding: 0; list-style: none; font-family: var(--pixel); font-size: clamp(9px, .85vw, 16px); }
-    ol.board li { display: flex; justify-content: space-between; padding: .5vh 0; border-bottom: 1px dashed #3b2a73; }
-    ol.board li:nth-child(1) { color: var(--capsule-accent); }
-    ol.board li .cup { color: var(--capsule-secondary); }
-    .empty { color: var(--ink-dim); font-size: clamp(16px, 1.3vw, 24px); }
+    ol.board { list-style: none; margin: 0; padding: 0; width: 100%; font-family: var(--pixel); font-size: 3cqw; }
+    ol.board li { display: flex; justify-content: space-between; padding: 1.2cqw 0; border-bottom: 1px dashed #3b2a73; }
+    ol.board li:first-child { color: var(--capsule-accent); }
+    ol.board .cup { color: var(--capsule-secondary); }
+    .empty { color: var(--ink-dim); font-size: 4.4cqw; }
 
     /* Tour d'un joueur */
-    #ready .box { text-align: center; }
-    #ready .who { font-family: var(--pixel); font-size: clamp(22px, 4vw, 72px); color: var(--capsule-accent); margin: 3vh 0; text-shadow: 4px 4px 0 var(--capsule-primary); }
-    #ready .hint { font-family: var(--pixel); font-size: clamp(10px, 1.4vw, 24px); }
-    #ready .count { font-family: var(--pixel); color: var(--capsule-secondary); margin-top: 3vh; font-size: clamp(10px, 1.2vw, 20px); }
+    #ready .who { font-family: var(--pixel); font-size: 8cqw; color: var(--capsule-accent); text-shadow: .12em .12em 0 var(--capsule-primary); line-height: 1.3; word-break: break-word; }
+    #ready .hint { font-family: var(--pixel); font-size: 3.6cqw; line-height: 1.6; }
+    #ready .count { font-family: var(--pixel); font-size: 4cqw; color: var(--capsule-secondary); }
 
-    /* Bandeau file d'attente pendant la partie */
-    #ticker {
-      position: fixed; right: 1.2vw; top: 1.2vh; font-family: var(--pixel);
-      font-size: clamp(8px, .75vw, 14px); color: var(--ink-dim); text-align: right; line-height: 1.8;
-      background: rgba(10, 3, 30, .6); padding: .6vw .8vw; display: none;
-    }
-    #ticker.on { display: block; }
-    #ticker b { color: var(--capsule-accent); font-weight: normal; }
+    /* Gagnant */
+    #winner { background: rgba(8, 2, 28, .9); }
+    #winner .big { font-family: var(--pixel); font-size: 9cqw; color: var(--capsule-accent); text-shadow: .1em .1em 0 var(--capsule-primary); line-height: 1.2; }
+    #winner .name { font-family: var(--pixel); font-size: 6cqw; color: var(--capsule-secondary); }
+    #winner .what { font-size: 6cqw; line-height: 1; }
 
-    /* Annonce d'un gagnant */
-    #winner { background: rgba(10, 3, 30, .88); }
-    #winner .box { text-align: center; max-width: 80vw; }
-    #winner .big { font-family: var(--pixel); font-size: clamp(24px, 4.5vw, 80px); color: var(--capsule-accent); text-shadow: 4px 4px 0 var(--capsule-primary); }
-    #winner .name { font-family: var(--pixel); font-size: clamp(14px, 2.4vw, 40px); margin: 3vh 0; color: var(--capsule-secondary); }
-    #winner .what { font-size: clamp(22px, 2.6vw, 48px); }
+    /* Bandeau de commande */
+    .deck { display: grid; grid-template-columns: auto 1fr auto; gap: 2.4vh; align-items: center; }
+    .deck img { height: 8.5vh; aspect-ratio: 1; image-rendering: pixelated; border: .5vh solid #fff; }
+    .deck .mid { font-family: var(--pixel); font-size: clamp(8px, min(1.35vh, 1.9vw), 20px); line-height: 1.7; color: var(--ink-dim); min-width: 0; }
+    .deck .mid b { color: var(--capsule-accent); font-weight: normal; }
+    .deck .mid .line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .deck .prizes-left { text-align: center; font-family: var(--pixel); font-size: clamp(8px, 1.1vh, 16px); color: var(--ink-dim); line-height: 1.5; }
+    .deck .prizes-left b { display: block; font-size: 2.2em; color: var(--capsule-primary); font-weight: normal; text-shadow: 0 0 10px var(--capsule-primary); }
 
-    .marquee {
-      position: fixed; left: 0; right: 0; bottom: 0; overflow: hidden; white-space: nowrap;
-      background: var(--capsule-primary); color: #fff; font-family: var(--pixel);
-      font-size: clamp(9px, .9vw, 16px); padding: .8vh 0;
-    }
-    .marquee span { display: inline-block; padding-left: 100%; animation: marquee 32s linear infinite; }
-    @keyframes marquee { to { transform: translateX(-100%); } }
-
-    body.playing .marquee, body.playing #sound { display: none; }
-    #sound { position: fixed; left: 1vw; bottom: 5vh; font-family: var(--pixel); font-size: 11px; color: var(--ink-dim); }
-    #fatal { position: fixed; inset: auto 0 40% 0; text-align: center; font-family: var(--pixel); color: var(--capsule-primary); display: none; }
+    #sound { position: fixed; left: 16px; top: 8px; font-family: var(--pixel); font-size: 10px; color: var(--ink-dim); z-index: 5; }
+    #fatal { position: fixed; inset: auto 16px 45% 16px; text-align: center; font-family: var(--pixel); color: var(--capsule-primary); display: none; z-index: 5; }
   </style>
 </head>
 <body>
-  <canvas id="game" width="384" height="216" aria-label="Ortho Invaders"></canvas>
+  <div class="cabinet">
+    <header class="marquee-top">
+      <span class="brand">CAPSULE</span>
+      <span class="title">ORTHO INVADERS</span>
+      <span class="script">Défendez l'arcade dentaire !</span>
+    </header>
 
-  <section id="attract" class="overlay on">
-    <div class="wrap">
-      <div>
-        <div class="logo">
-          <span class="brand">CAPSULE</span>
-          <span class="title">ORTHO<br>INVADERS</span>
-          <span class="script">Arcade Edition</span>
-        </div>
-        <div class="scan">
-          <img id="qr" alt="QR code pour rejoindre la partie">
-          <div class="how">
-            <b>1.</b> Scannez le QR code<br>
-            <b>2.</b> Connectez votre<br>&nbsp;&nbsp;&nbsp;compte Capsule<br>
-            <b>3.</b> Votre téléphone<br>&nbsp;&nbsp;&nbsp;devient la manette<br>
-            <span class="blink">CODE&nbsp;<span class="code" id="code">····</span></span>
+    <div class="stage" data-fit>
+      <div class="screen-box">
+        <canvas id="game" width="216" height="336" aria-label="Ortho Invaders"></canvas>
+        <div class="crt" aria-hidden="true"></div>
+
+        <section id="attract" class="overlay on">
+          <div class="stack page on" data-page="scan">
+            <div class="call blink">▶ SCANNEZ<br>POUR JOUER</div>
+            <div class="qr-wrap">
+              <img id="qr" alt="QR code pour rejoindre la partie">
+              <div class="code">CODE BORNE <b id="code">····</b></div>
+            </div>
+            <div class="steps">
+              <div class="step"><b>1</b>Scannez avec votre téléphone</div>
+              <div class="step"><b>2</b>Connectez votre compte Capsule</div>
+              <div class="step"><b>3</b>Le téléphone devient la manette</div>
+            </div>
           </div>
-        </div>
+          <div class="stack page" data-page="prizes">
+            <h2>★ BATTEZ LA MÉGA-CARIE ★<br>GAGNEZ UN REPLAY</h2>
+            <div class="prizes" id="prizes"></div>
+            <div class="left-count"><b id="left">–</b> REPLAYS À GAGNER</div>
+            <h2>TOP SCORES DU JOUR</h2>
+            <ol class="board" id="board"></ol>
+          </div>
+        </section>
+
+        <section id="ready" class="overlay">
+          <div class="stack">
+            <div class="hint">AU TOUR DE</div>
+            <div class="who" id="readyName"></div>
+            <div class="hint blink">▶ APPUYEZ SUR START<br>SUR VOTRE TÉLÉPHONE</div>
+            <div class="count" id="readyCount"></div>
+          </div>
+        </section>
+
+        <section id="winner" class="overlay">
+          <div class="stack">
+            <div class="big">★ GAGNANT ★</div>
+            <div class="name" id="winnerName"></div>
+            <div class="what" id="winnerWhat"></div>
+          </div>
+        </section>
       </div>
-      <div class="side">
-        <div class="panel">
-          <h2>▶ Battez la Méga-Carie, gagnez un replay</h2>
-          <div class="prizes" id="prizes"></div>
-          <div class="left-count"><b id="left">–</b> REPLAYS À GAGNER AUJOURD'HUI</div>
-        </div>
-        <div class="panel">
-          <h2>★ Top scores du jour</h2>
-          <ol class="board" id="board"></ol>
-        </div>
-        <div class="panel" id="queuePanel">
-          <h2>⏳ File d'attente</h2>
-          <div id="queue" class="empty">Personne… à vous de jouer !</div>
-        </div>
+    </div>
+
+    <footer class="deck">
+      <img id="qrMini" alt="QR code pour rejoindre la file">
+      <div class="mid">
+        <div class="line">SCANNEZ POUR REJOINDRE LA FILE</div>
+        <div class="line" id="deckNext">PERSONNE EN ATTENTE</div>
+        <div class="line">1 LOT PAR COMPTE CAPSULE</div>
       </div>
-    </div>
-  </section>
+      <div class="prizes-left"><b id="leftDeck">–</b>REPLAYS<br>À GAGNER</div>
+    </footer>
+  </div>
 
-  <section id="ready" class="overlay">
-    <div class="box">
-      <div class="hint">AU TOUR DE</div>
-      <div class="who" id="readyName"></div>
-      <div class="hint blink">▶ APPUYEZ SUR START SUR VOTRE TÉLÉPHONE</div>
-      <div class="count" id="readyCount"></div>
-    </div>
-  </section>
-
-  <section id="winner" class="overlay">
-    <div class="box">
-      <div class="big">★ GAGNANT ★</div>
-      <div class="name" id="winnerName"></div>
-      <div class="what" id="winnerWhat"></div>
-    </div>
-  </section>
-
-  <div id="ticker"></div>
-  <div id="sound">🔈 Cliquez pour activer le son</div>
+  <div id="sound">🔈 CLIQUEZ POUR LE SON</div>
   <div id="fatal"></div>
-  <div class="marquee"><span>★ JOURNÉES PORTES OUVERTES ORTHODONTIE ★ Scannez · Connectez-vous avec votre compte Capsule · Jouez avec votre téléphone · Vainquez la Méga-Carie et repartez avec un replay de formation offert ★ 1 lot par compte ★ capsule-med.com ★</span></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sprites.js"></script>

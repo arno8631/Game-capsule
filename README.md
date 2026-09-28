@@ -7,7 +7,7 @@ bat le boss, il **gagne un replay de formation**. Un code à 100 % est alors cr�
 ```
  ┌──────────── GRAND ÉCRAN /screen ─────────────┐        ┌── TÉLÉPHONE /play ──┐
  │  QR code · file d'attente · top scores        │  scan  │ Connexion Capsule   │
- │  jeu 384×216 pixel art · annonce du gagnant   │ ─────▶ │ ◀ ▶  (ou gyroscope) │
+ │  jeu portrait 216×336 · annonce du gagnant  │ ─────▶ │ ◀ ▶  (ou gyroscope) │
  └───────────────────────▲───────────────────────┘        │ ● TIR  · vibrations │
                          │ WebSocket (socket.io)          └─────────▲───────────┘
                          └────────────── serveur Node ──────────────┘
@@ -25,6 +25,7 @@ bat le boss, il **gagne un replay de formation**. Un code à 100 % est alors cr�
 | **Boucliers** | 4 molaires avec bracket, destructibles au pixel près |
 | **Ennemis** | Bactérie (10 pts) · Plaque (20 pts) · Bonbon (30 pts, 2 impacts), multipliés par le numéro de vague |
 | **Bonus** | Bracket = tir triple · Élastique = tir rapide · Fluor = bouclier · Cœur = +1 vie |
+| **Format** | Borne **verticale** (tablette ou totem en portrait, 9:16 ou 3:4) : fronton lumineux, écran avec effet cathodique, bandeau avec QR code permanent pour rejoindre la file |
 | **Structure** | 3 vagues + boss, soit environ 2 min 30 s par partie. Entre les vagues, un encart « Le saviez-vous ? » donne une info d'hygiène orthodontique |
 | **Victoire** | Vaincre la Méga-Carie avec au moins 1 vie restante. Bonus de 1 000 pts par vie restante |
 | **Commandes** | Téléphone : flèches ou **inclinaison (gyroscope)** + bouton TIR, avec **vibrations** au contact. Écran : clavier (← → Espace) ou **manette Bluetooth** (Gamepad API) |

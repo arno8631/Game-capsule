@@ -29,21 +29,27 @@
   socket.on('room', ({ code, qr }) => {
     try { localStorage.setItem('arcadeRoom', code); } catch {}
     $('qr').src = qr;
+    $('qrMini').src = qr;
     $('code').textContent = code;
   });
 
+  // L'accueil alterne « scannez pour jouer » et « lots + classement », comme une vraie borne.
+  let page = 0;
+  setInterval(() => {
+    if (!$('attract').classList.contains('on')) return;
+    page = (page + 1) % 2;
+    document.querySelectorAll('#attract .page').forEach((el, i) => el.classList.toggle('on', i === page));
+  }, 9000);
+
   socket.on('queue', ({ queue, current: cur, leaderboard, prizesLeft }) => {
     $('left').textContent = prizesLeft;
-    $('queue').innerHTML = queue.length
-      ? queue.map((n, i) => `${i + 1}. ${esc(n)}`).join('<br>')
-      : 'Personne… à vous de jouer !';
-    $('queue').classList.toggle('empty', !queue.length);
+    $('leftDeck').textContent = prizesLeft;
     $('board').innerHTML = leaderboard.length
       ? leaderboard.map((s) => `<li><span>${esc(s.name)} ${s.won ? '<span class="cup">★</span>' : ''}</span><span>${s.score}</span></li>`).join('')
       : '<li class="empty">Aucun score… pour l’instant</li>';
-    const ticker = $('ticker');
-    ticker.innerHTML = queue.length ? `PROCHAIN : <b>${esc(queue[0])}</b>${queue.length > 1 ? `<br>+${queue.length - 1} en attente` : ''}` : '';
-    ticker.classList.toggle('on', Boolean(queue.length) && Game.mode !== 'attract');
+    $('deckNext').innerHTML = queue.length
+      ? `PROCHAIN : <b>${esc(queue[0]).toUpperCase()}</b>${queue.length > 1 ? ` +${queue.length - 1}` : ''}`
+      : (cur ? `EN JEU : <b>${esc(cur).toUpperCase()}</b>` : 'PERSONNE EN ATTENTE');
   });
 
   socket.on('game:ready', ({ gameId, name }) => {
@@ -106,7 +112,6 @@
     Game.stop();
     document.body.classList.remove('playing');
     show('attract', true);
-    $('ticker').classList.remove('on');
   }
 
   // Mode libre (animateurs) : Entrée depuis l'accueil, sans lot à la clé.
