@@ -137,17 +137,17 @@
   // ── Contenu des vagues ───────────────────────────────────
   const WAVES = [
     {
-      title: 'VAGUE 1', name: 'LES BACTÉRIES',
+      title: 'VAGUE 1', name: 'LES BACTÉRIES', place: 'AU CABINET',
       tip: 'Le biofilm dentaire se reconstitue en quelques heures après le brossage.',
       rows: ['plaq', 'bact', 'bact'], speed: 10, fire: 1.4, bulletSpeed: 70, dive: 0,
     },
     {
-      title: 'VAGUE 2', name: 'LA PLAQUE ATTAQUE',
+      title: 'VAGUE 2', name: 'LA PLAQUE ATTAQUE', place: 'EN SALLE DE RADIO',
       tip: 'Brackets et fils multiplient les zones de rétention : l’hygiène est la clé du traitement.',
       rows: ['candy', 'plaq', 'bact', 'bact'], speed: 12, fire: 1.05, bulletSpeed: 80, dive: 4.5,
     },
     {
-      title: 'VAGUE 3', name: 'INVASION SUCRÉE',
+      title: 'VAGUE 3', name: 'INVASION SUCRÉE', place: 'AU LABO DE PROTHÈSE',
       tip: 'Chaque prise sucrée relance l’acidité en bouche : attention aux grignotages sous appareil.',
       rows: ['candy', 'candy', 'plaq', 'plaq', 'bact'], speed: 14, fire: 0.85, bulletSpeed: 90, dive: 3,
     },
@@ -749,10 +749,14 @@
     g.powerups = g.powerups.filter((u) => !u.dead && u.y < GUM_Y);
   }
 
-  // ── Décor pré-rendu : un cabinet dentaire en pixel art, ambiance néon ──
+  // ── Décors pré-rendus : une pièce différente par vague, en pixel art néon ──
+  // Vague 1 : cabinet · Vague 2 : salle de radio · Vague 3 : laboratoire de prothèse · Boss : cabinet en alerte
   const LAMP = { x: 152, y: 58 };        // scialytique (lampe opératoire)
   const MONITOR = { x: 170, y: 92, w: 36, h: 22 };
-  const bg = (() => {
+  const FURNACE = { x: 184, y: 118 };    // hublot du four à céramique
+  const BUNSEN = { x: 146, y: 139 };     // flamme du bec Bunsen
+
+  function buildRoom(theme, drawProps) {
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     const c = cv.getContext('2d');
@@ -760,102 +764,21 @@
 
     // Mur carrelé
     const wall = c.createLinearGradient(0, 0, 0, HORIZON);
-    wall.addColorStop(0, '#120630');
-    wall.addColorStop(1, '#241050');
+    wall.addColorStop(0, theme.wall[0]);
+    wall.addColorStop(1, theme.wall[1]);
     c.fillStyle = wall;
     c.fillRect(0, 0, W, HORIZON);
-    for (let y = 22; y < HORIZON; y += 12) r(0, y, W, 1, 'rgba(90, 60, 170, 0.22)');
+    for (let y = 22; y < HORIZON; y += 12) r(0, y, W, 1, theme.grout);
     for (let row = 0, y = 22; y < HORIZON; y += 12, row++) {
-      for (let x = (row % 2) * 6; x < W; x += 12) r(x, y, 1, 12, 'rgba(90, 60, 170, 0.16)');
+      for (let x = (row % 2) * 6; x < W; x += 12) r(x, y, 1, 12, theme.grout);
     }
-    // Plinthe / cimaise
-    r(0, 158, W, 3, '#3a1f6e');
-    r(0, 158, W, 1, '#6b4bb8');
+    r(0, 158, W, 3, theme.rail[0]);
+    r(0, 158, W, 1, theme.rail[1]);
     // Tube néon au plafond
-    r(18, 16, W - 36, 2, '#7ff9ff');
-    r(18, 18, W - 36, 1, '#1f8f98');
+    r(18, 16, W - 36, 2, theme.neon[0]);
+    r(18, 18, W - 36, 1, theme.neon[1]);
 
-    // Enseigne néon « CAPSULE »
-    const sign = renderText('CAPSULE', { color: '#ff5fa2', shadow: '#5a0b3a' });
-    c.drawImage(sign, Math.round(W / 2 - sign.width / 2), 23);
-
-    // Négatoscope avec panoramique dentaire (mur gauche)
-    r(6, 94, 54, 38, '#12062e');
-    r(7, 95, 52, 36, '#6c6c80');
-    r(9, 97, 48, 32, '#0d2a3a');
-    for (let i = 0; i < 14; i++) {           // arcade du haut
-      const x = 12 + i * 3, y = 104 + Math.round(Math.pow((i - 6.5) / 6.5, 2) * 5);
-      r(x, y, 2, 5, '#bfeaff');
-      r(x, y + 5, 2, 2, '#5aa9c9');
-    }
-    for (let i = 0; i < 14; i++) {           // arcade du bas
-      const x = 12 + i * 3, y = 122 - Math.round(Math.pow((i - 6.5) / 6.5, 2) * 5);
-      r(x, y - 5, 2, 5, '#bfeaff');
-      r(x, y - 7, 2, 2, '#5aa9c9');
-    }
-    r(9, 97, 48, 1, 'rgba(255,255,255,0.35)');
-    // Diplôme
-    r(10, 60, 26, 20, '#d9a441');
-    r(12, 62, 22, 16, '#f5ecd2');
-    for (let i = 0; i < 4; i++) r(15, 65 + i * 3, 16 - (i % 2) * 5, 1, '#8a7a5a');
-    r(28, 73, 4, 4, '#c2185b');
-
-    // Moniteur (tracé animé plus tard)
-    const M = MONITOR;
-    r(M.x - 1, M.y - 1, M.w + 2, M.h + 2, '#12062e');
-    r(M.x, M.y, M.w, M.h, '#3b3b52');
-    r(M.x + 2, M.y + 2, M.w - 4, M.h - 4, '#04160c');
-    r(M.x + M.w / 2 - 2, M.y + M.h, 4, 4, '#3b3b52');
-
-    // Meuble à tiroirs + plan de travail (droite)
-    r(160, 132, 52, 74, '#2f2360');
-    r(160, 132, 52, 3, '#8f82c8');
-    for (let i = 0; i < 4; i++) {
-      r(163, 139 + i * 16, 46, 14, '#3b2d78');
-      r(163, 139 + i * 16, 46, 1, '#5a4aa0');
-      r(182, 145 + i * 16, 8, 2, '#2de2e6');
-    }
-    // Flacons sur le plan de travail
-    r(166, 124, 5, 8, '#7ff9ff'); r(167, 122, 3, 2, '#e0e0f0');
-    r(174, 126, 5, 6, '#ffd319'); r(175, 124, 3, 2, '#e0e0f0');
-    r(198, 120, 8, 12, '#e8e8f5'); r(199, 118, 6, 2, '#c2185b');
-
-    // Scialytique : bras depuis le plafond + tête de lampe
-    r(LAMP.x + 10, 18, 2, 26, '#8f82c8');
-    r(LAMP.x - 2, 42, 16, 2, '#8f82c8');
-    r(LAMP.x - 2, 42, 2, 12, '#8f82c8');
-    r(LAMP.x - 14, 54, 30, 8, '#12062e');
-    r(LAMP.x - 13, 55, 28, 6, '#b8b8d0');
-    r(LAMP.x - 10, 61, 22, 2, '#fff6c2');
-
-    // Fauteuil dentaire (centre) : dossier incliné, assise, repose-jambes, socle
-    const K = '#12062e', SEAT = '#b3124a', SEAT_HI = '#ff5fa2', SEAT_DK = '#6d0a2c';
-    c.fillStyle = 'rgba(0, 0, 0, 0.35)';
-    c.beginPath(); c.ellipse(104, 206, 44, 5, 0, 0, Math.PI * 2); c.fill();            // ombre au sol
-    r(94, 186, 24, 20, K); r(96, 186, 20, 20, '#6c6c80'); r(96, 186, 3, 20, '#9a9ab4'); // pied
-    r(84, 202, 44, 4, K); r(85, 203, 42, 3, '#4a4a60');                                 // socle
-    const chair = (x, top, h) => { r(x, top - 1, 1, h + 2, K); r(x, top, 1, h, SEAT); r(x, top, 1, 1, SEAT_HI); r(x, top + h - 2, 1, 2, SEAT_DK); };
-    for (let x = 64; x <= 122; x++) chair(x, 176, 12);                                 // assise
-    for (let x = 123; x <= 156; x++) chair(x, 176 + Math.round((x - 123) * 0.42), 10);  // repose-jambes
-    for (let y = 136; y <= 178; y++) {                                                  // dossier
-      const x0 = Math.round(44 + (y - 136) * 0.5);
-      r(x0 - 1, y, 20, 1, K); r(x0, y, 18, 1, SEAT); r(x0, y, 2, 1, SEAT_HI); r(x0 + 15, y, 3, 1, SEAT_DK);
-    }
-    r(38, 126, 20, 11, K); r(39, 127, 18, 9, SEAT); r(39, 127, 18, 2, SEAT_HI);          // têtière
-    r(110, 166, 3, 11, '#4a4a60'); r(98, 164, 26, 3, K); r(99, 165, 24, 2, '#8f82c8');   // accoudoir
-    // Crachoir
-    r(28, 164, 14, 4, K); r(29, 164, 12, 3, '#7ff9ff'); r(33, 168, 4, 22, '#4a4a60');
-    // Plateau d'instruments sur bras articulé
-    r(118, 150, 2, 18, '#8f82c8'); r(104, 146, 34, 5, K); r(105, 147, 32, 3, '#c8c8d8');
-    r(108, 144, 1, 3, '#ffffff'); r(107, 143, 3, 2, '#bfeaff');                     // miroir
-    r(114, 143, 1, 4, '#ffffff'); r(115, 143, 2, 1, '#ffffff');                     // sonde
-    r(121, 143, 1, 4, '#ffffff'); r(123, 143, 1, 4, '#ffffff'); r(122, 145, 1, 1, '#ffffff'); // précelles
-    r(128, 144, 6, 2, '#2de2e6');                                                    // porte-instruments
-
-    // Plante (gauche)
-    r(8, 188, 16, 18, K); r(9, 189, 14, 17, '#c46a2a'); r(9, 189, 14, 2, '#e08a3a');
-    for (const [x, y, w] of [[12, 176, 3], [7, 180, 5], [17, 178, 5], [10, 172, 2], [19, 172, 2], [14, 170, 2]]) r(x, y, w, 10, '#1f9e3a');
-    for (const [x, y] of [[12, 176], [8, 180], [18, 178], [14, 170]]) r(x, y, 2, 2, '#7dff5c');
+    drawProps(c, r);
 
     // Sol : carrelage en damier, en perspective
     const img = c.getImageData(0, HORIZON, W, GUM_Y - HORIZON);
@@ -866,15 +789,14 @@
       const scale = 7 + k * 26;
       for (let x = 0; x < W; x++) {
         const col = Math.floor((x - W / 2) / scale + 100);
-        const dark = (row + col) % 2 === 0;
+        const [cr, cg, cb] = (row + col) % 2 === 0 ? theme.floor[0] : theme.floor[1];
         const i = (y * W + x) * 4;
         const shade = 0.55 + k * 0.45;
-        const [cr, cg, cb] = dark ? [34, 16, 74] : [58, 36, 110];
         img.data[i] = cr * shade; img.data[i + 1] = cg * shade; img.data[i + 2] = cb * shade; img.data[i + 3] = 255;
       }
     }
     c.putImageData(img, 0, HORIZON);
-    r(0, HORIZON, W, 1, '#ff2a6d');
+    r(0, HORIZON, W, 1, theme.line);
 
     // Voile sombre : le décor reste lisible sans gêner le jeu
     r(0, 0, W, GUM_Y, 'rgba(8, 2, 28, 0.38)');
@@ -886,51 +808,280 @@
     gum.addColorStop(1, '#7a0f3f');
     c.fillStyle = gum;
     c.fillRect(0, GUM_Y, W, H - GUM_Y);
-    c.fillStyle = '#12062e';
-    c.fillRect(0, GUM_Y, W, 1);
+    r(0, GUM_Y, W, 1, '#12062e');
     for (let i = 0; i < 12; i++) {
       const x = 6 + i * 17 + (i % 2);
       c.drawImage(S.incisor, x, GUM_Y - 5);
-      c.fillStyle = '#ffb3d1';
-      c.fillRect(x + 1, GUM_Y + 3, 5, 1);
+      r(x + 1, GUM_Y + 3, 5, 1, '#ffb3d1');
     }
-    c.fillStyle = '#2de2e6';
-    c.fillRect(0, GUM_Y - 1, W, 1); // fil
+    r(0, GUM_Y - 1, W, 1, '#2de2e6'); // fil
     return cv;
-  })();
+  }
+
+  const ROOMS = {
+    // ── Cabinet dentaire ──
+    cabinet: buildRoom({
+      wall: ['#120630', '#241050'], grout: 'rgba(90, 60, 170, 0.2)', rail: ['#3a1f6e', '#6b4bb8'],
+      neon: ['#7ff9ff', '#1f8f98'], floor: [[34, 16, 74], [58, 36, 110]], line: '#ff2a6d',
+    }, (c, r) => {
+    // Enseigne néon « CAPSULE »
+      const sign = renderText('CAPSULE', { color: '#ff5fa2', shadow: '#5a0b3a' });
+      c.drawImage(sign, Math.round(W / 2 - sign.width / 2), 23);
+
+      // Négatoscope avec panoramique dentaire (mur gauche)
+      r(6, 94, 54, 38, '#12062e');
+      r(7, 95, 52, 36, '#6c6c80');
+      r(9, 97, 48, 32, '#0d2a3a');
+      for (let i = 0; i < 14; i++) {           // arcade du haut
+        const x = 12 + i * 3, y = 104 + Math.round(Math.pow((i - 6.5) / 6.5, 2) * 5);
+        r(x, y, 2, 5, '#bfeaff');
+        r(x, y + 5, 2, 2, '#5aa9c9');
+      }
+      for (let i = 0; i < 14; i++) {           // arcade du bas
+        const x = 12 + i * 3, y = 122 - Math.round(Math.pow((i - 6.5) / 6.5, 2) * 5);
+        r(x, y - 5, 2, 5, '#bfeaff');
+        r(x, y - 7, 2, 2, '#5aa9c9');
+      }
+      r(9, 97, 48, 1, 'rgba(255,255,255,0.35)');
+      // Diplôme
+      r(10, 60, 26, 20, '#d9a441');
+      r(12, 62, 22, 16, '#f5ecd2');
+      for (let i = 0; i < 4; i++) r(15, 65 + i * 3, 16 - (i % 2) * 5, 1, '#8a7a5a');
+      r(28, 73, 4, 4, '#c2185b');
+
+      // Moniteur (tracé animé plus tard)
+      const M = MONITOR;
+      r(M.x - 1, M.y - 1, M.w + 2, M.h + 2, '#12062e');
+      r(M.x, M.y, M.w, M.h, '#3b3b52');
+      r(M.x + 2, M.y + 2, M.w - 4, M.h - 4, '#04160c');
+      r(M.x + M.w / 2 - 2, M.y + M.h, 4, 4, '#3b3b52');
+
+      // Meuble à tiroirs + plan de travail (droite)
+      r(160, 132, 52, 74, '#2f2360');
+      r(160, 132, 52, 3, '#8f82c8');
+      for (let i = 0; i < 4; i++) {
+        r(163, 139 + i * 16, 46, 14, '#3b2d78');
+        r(163, 139 + i * 16, 46, 1, '#5a4aa0');
+        r(182, 145 + i * 16, 8, 2, '#2de2e6');
+      }
+      // Flacons sur le plan de travail
+      r(166, 124, 5, 8, '#7ff9ff'); r(167, 122, 3, 2, '#e0e0f0');
+      r(174, 126, 5, 6, '#ffd319'); r(175, 124, 3, 2, '#e0e0f0');
+      r(198, 120, 8, 12, '#e8e8f5'); r(199, 118, 6, 2, '#c2185b');
+
+      // Scialytique : bras depuis le plafond + tête de lampe
+      r(LAMP.x + 10, 18, 2, 26, '#8f82c8');
+      r(LAMP.x - 2, 42, 16, 2, '#8f82c8');
+      r(LAMP.x - 2, 42, 2, 12, '#8f82c8');
+      r(LAMP.x - 14, 54, 30, 8, '#12062e');
+      r(LAMP.x - 13, 55, 28, 6, '#b8b8d0');
+      r(LAMP.x - 10, 61, 22, 2, '#fff6c2');
+
+      // Fauteuil dentaire (centre) : dossier incliné, assise, repose-jambes, socle
+      const K = '#12062e', SEAT = '#b3124a', SEAT_HI = '#ff5fa2', SEAT_DK = '#6d0a2c';
+      c.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      c.beginPath(); c.ellipse(104, 206, 44, 5, 0, 0, Math.PI * 2); c.fill();            // ombre au sol
+      r(94, 186, 24, 20, K); r(96, 186, 20, 20, '#6c6c80'); r(96, 186, 3, 20, '#9a9ab4'); // pied
+      r(84, 202, 44, 4, K); r(85, 203, 42, 3, '#4a4a60');                                 // socle
+      const chair = (x, top, h) => { r(x, top - 1, 1, h + 2, K); r(x, top, 1, h, SEAT); r(x, top, 1, 1, SEAT_HI); r(x, top + h - 2, 1, 2, SEAT_DK); };
+      for (let x = 64; x <= 122; x++) chair(x, 176, 12);                                 // assise
+      for (let x = 123; x <= 156; x++) chair(x, 176 + Math.round((x - 123) * 0.42), 10);  // repose-jambes
+      for (let y = 136; y <= 178; y++) {                                                  // dossier
+        const x0 = Math.round(44 + (y - 136) * 0.5);
+        r(x0 - 1, y, 20, 1, K); r(x0, y, 18, 1, SEAT); r(x0, y, 2, 1, SEAT_HI); r(x0 + 15, y, 3, 1, SEAT_DK);
+      }
+      r(38, 126, 20, 11, K); r(39, 127, 18, 9, SEAT); r(39, 127, 18, 2, SEAT_HI);          // têtière
+      r(110, 166, 3, 11, '#4a4a60'); r(98, 164, 26, 3, K); r(99, 165, 24, 2, '#8f82c8');   // accoudoir
+      // Crachoir
+      r(28, 164, 14, 4, K); r(29, 164, 12, 3, '#7ff9ff'); r(33, 168, 4, 22, '#4a4a60');
+      // Plateau d'instruments sur bras articulé
+      r(118, 150, 2, 18, '#8f82c8'); r(104, 146, 34, 5, K); r(105, 147, 32, 3, '#c8c8d8');
+      r(108, 144, 1, 3, '#ffffff'); r(107, 143, 3, 2, '#bfeaff');                     // miroir
+      r(114, 143, 1, 4, '#ffffff'); r(115, 143, 2, 1, '#ffffff');                     // sonde
+      r(121, 143, 1, 4, '#ffffff'); r(123, 143, 1, 4, '#ffffff'); r(122, 145, 1, 1, '#ffffff'); // précelles
+      r(128, 144, 6, 2, '#2de2e6');                                                    // porte-instruments
+
+      // Plante (gauche)
+      r(8, 188, 16, 18, K); r(9, 189, 14, 17, '#c46a2a'); r(9, 189, 14, 2, '#e08a3a');
+      for (const [x, y, w] of [[12, 176, 3], [7, 180, 5], [17, 178, 5], [10, 172, 2], [19, 172, 2], [14, 170, 2]]) r(x, y, w, 10, '#1f9e3a');
+      for (const [x, y] of [[12, 176], [8, 180], [18, 178], [14, 170]]) r(x, y, 2, 2, '#7dff5c');
+
+    }),
+
+    // ── Salle de radiologie ──
+    radio: buildRoom({
+      wall: ['#06142e', '#0f2a55'], grout: 'rgba(60, 160, 220, 0.18)', rail: ['#1b3d6e', '#3f7fc0'],
+      neon: ['#bfeaff', '#3a86ff'], floor: [[14, 28, 64], [26, 52, 98]], line: '#2de2e6',
+    }, (c, r) => {
+      const K = '#12062e';
+      // Voyant « RAYONS X » (s'allume en rouge, voir drawBackground)
+      r(W / 2 - 34, 21, 68, 11, K); r(W / 2 - 33, 22, 66, 9, '#3a0d18');
+      const sign = renderText('RAYONS X', { color: '#ff6b6b', shadow: '#3a0d18' });
+      c.drawImage(sign, Math.round(W / 2 - sign.width / 2), 23);
+      // Mur de négatoscopes (radios allumées)
+      for (let n = 0; n < 3; n++) {
+        const x = 6 + n * 22;
+        r(x, 58, 20, 28, K); r(x + 1, 59, 18, 26, '#6c6c80'); r(x + 2, 60, 16, 24, '#0d2a3a');
+      }
+      // radio d'une dent (racines)
+      r(12, 64, 6, 7, '#bfeaff'); r(12, 71, 2, 9, '#8fcfe8'); r(16, 71, 2, 9, '#8fcfe8'); r(13, 65, 4, 3, '#e8f7ff');
+      // téléradiographie de profil (crâne)
+      c.fillStyle = '#8fcfe8'; c.beginPath(); c.ellipse(38, 70, 7, 8, 0, 0, Math.PI * 2); c.fill();
+      r(36, 76, 8, 5, '#8fcfe8'); r(39, 77, 5, 1, '#e8f7ff'); r(31, 66, 2, 2, '#0d2a3a');
+      // panoramique
+      for (let i = 0; i < 7; i++) { r(52 + i * 2, 66 + Math.abs(i - 3), 1, 4, '#bfeaff'); r(52 + i * 2, 76 - Math.abs(i - 3), 1, 4, '#bfeaff'); }
+      // Appareil panoramique (OPT) au centre
+      r(100, 34, 14, 172, K); r(101, 34, 12, 172, '#c8c8d8'); r(101, 34, 3, 172, '#ececf8'); // colonne
+      r(92, 198, 30, 8, K); r(93, 199, 28, 6, '#8f82c8');                                   // base
+      r(66, 92, 82, 14, K); r(67, 93, 80, 12, '#e8e8f5'); r(67, 93, 80, 2, '#ffffff'); r(67, 103, 80, 2, '#9a9ab4'); // bras
+      r(66, 106, 14, 34, K); r(67, 107, 12, 32, '#d0d0e2'); r(69, 110, 8, 8, '#2de2e6');   // tête du tube
+      r(134, 106, 14, 34, K); r(135, 107, 12, 32, '#d0d0e2'); r(137, 110, 8, 20, '#12062e'); // capteur
+      r(98, 140, 18, 4, K); r(99, 141, 16, 2, '#2de2e6');                                  // mentonnière
+      r(88, 146, 38, 3, K); r(89, 147, 36, 1, '#8f82c8');                                  // poignées
+      r(116, 60, 18, 12, K); r(117, 61, 16, 10, '#1b3d6e'); r(119, 63, 5, 2, '#7dff5c'); r(126, 63, 5, 2, '#ff3b3b'); // pupitre
+      // Panneau radioprotection
+      c.fillStyle = K; c.beginPath(); c.moveTo(186, 60); c.lineTo(200, 84); c.lineTo(172, 84); c.closePath(); c.fill();
+      c.fillStyle = '#ffd319'; c.beginPath(); c.moveTo(186, 63); c.lineTo(197, 82); c.lineTo(175, 82); c.closePath(); c.fill();
+      r(185, 72, 3, 3, K); r(181, 76, 3, 2, K); r(189, 76, 3, 2, K); r(185, 68, 3, 2, K);
+      // Tablier plombé sur sa patère
+      r(184, 96, 4, 4, '#c8c8d8');
+      r(172, 100, 28, 64, K); r(173, 101, 26, 62, '#3f5f8f'); r(173, 101, 26, 3, '#6f93c8'); r(176, 110, 20, 2, '#2e4a73');
+      r(178, 101, 16, 6, '#2e4a73');
+      // Siège opérateur
+      r(20, 176, 18, 5, K); r(21, 177, 16, 3, '#3f7fc0'); r(28, 181, 3, 20, '#6c6c80'); r(20, 200, 18, 3, '#4a4a60');
+    }),
+
+    // ── Laboratoire de prothèse ──
+    labo: buildRoom({
+      wall: ['#1a0716', '#3a1426'], grout: 'rgba(220, 110, 80, 0.16)', rail: ['#5a2a2a', '#b8683c'],
+      neon: ['#ffd9a8', '#b8683c'], floor: [[46, 20, 30], [78, 36, 44]], line: '#ff901f',
+    }, (c, r) => {
+      const K = '#12062e';
+      const sign = renderText('LABO PROTHÈSE', { color: '#ffb347', shadow: '#4a1a10' });
+      c.drawImage(sign, Math.round(W / 2 - sign.width / 2), 23);
+      // Étagères murales avec modèles et couronnes
+      for (const y of [60, 88]) { r(6, y, 86, 3, K); r(6, y, 86, 2, '#b8683c'); }
+      for (let i = 0; i < 5; i++) { // modèles en plâtre (arcades)
+        const x = 10 + i * 16;
+        r(x, 50, 12, 10, K); r(x + 1, 52, 10, 8, '#f2ead8'); r(x + 1, 51, 10, 2, '#ff8ab0');
+        for (let t = 0; t < 4; t++) r(x + 2 + t * 2, 50, 1, 2, '#ffffff');
+      }
+      for (let i = 0; i < 6; i++) { // bocaux de couronnes
+        const x = 10 + i * 13;
+        r(x, 76, 10, 12, K); r(x + 1, 77, 8, 11, 'rgba(191, 234, 255, 0.5)'); r(x + 1, 76, 8, 2, '#b8683c');
+        r(x + 3, 82, 2, 3, '#ffffff'); r(x + 5, 84, 2, 3, '#ffd319');
+      }
+      // Lampe d'établi articulée
+      r(118, 58, 3, 40, '#8f82c8'); r(104, 56, 18, 3, '#8f82c8'); r(98, 52, 14, 7, K); r(99, 53, 12, 5, '#c8c8d8'); r(100, 58, 10, 1, '#fff6c2');
+      // Four à céramique (hublot rougeoyant, voir drawBackground)
+      r(162, 94, 44, 52, K); r(163, 95, 42, 50, '#4a4a60'); r(163, 95, 42, 3, '#8f82c8');
+      c.fillStyle = K; c.beginPath(); c.arc(FURNACE.x, FURNACE.y, 11, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ff6a1f'; c.beginPath(); c.arc(FURNACE.x, FURNACE.y, 9, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ffd319'; c.beginPath(); c.arc(FURNACE.x, FURNACE.y, 5, 0, Math.PI * 2); c.fill();
+      r(168, 134, 14, 3, '#7dff5c'); r(186, 134, 4, 3, '#ff3b3b'); r(193, 134, 4, 3, '#ffd319');
+      // Établi
+      r(0, 146, 160, 8, K); r(0, 147, 160, 6, '#a86b3c'); r(0, 147, 160, 2, '#d69a5c');
+      for (let i = 0; i < 4; i++) { r(4 + i * 40, 154, 36, 52, '#3a1a24'); r(4 + i * 40, 154, 36, 1, '#5a2a34'); r(19 + i * 40, 170, 6, 2, '#ff901f'); }
+      // Articulateur avec modèles
+      r(18, 118, 30, 3, '#c8c8d8'); r(18, 140, 30, 3, '#c8c8d8'); r(44, 118, 3, 25, '#c8c8d8'); r(46, 128, 5, 4, '#8f82c8');
+      r(20, 121, 22, 6, '#f2ead8'); r(20, 134, 22, 6, '#f2ead8');
+      for (let t = 0; t < 7; t++) { r(21 + t * 3, 127, 2, 2, '#ffffff'); r(21 + t * 3, 132, 2, 2, '#ffffff'); }
+      // Microscope
+      r(76, 142, 20, 4, K); r(77, 143, 18, 2, '#6c6c80'); r(84, 110, 4, 32, '#6c6c80'); r(80, 106, 12, 6, '#c8c8d8');
+      r(78, 98, 5, 10, '#c8c8d8'); r(89, 98, 5, 10, '#c8c8d8'); r(80, 124, 14, 3, '#8f82c8');
+      // Bec Bunsen (flamme animée, voir drawBackground)
+      r(BUNSEN.x - 4, 142, 8, 4, K); r(BUNSEN.x - 3, 142, 6, 3, '#8f82c8'); r(BUNSEN.x - 1, 128, 3, 14, '#c8c8d8');
+      // Tabouret de prothésiste
+      r(56, 176, 20, 5, K); r(57, 177, 18, 3, '#b8683c'); r(64, 181, 4, 20, '#6c6c80'); r(56, 200, 20, 3, '#4a4a60');
+    }),
+  };
+  const bg = ROOMS.cabinet;
+
+  let roomKey = 'cabinet';
+  let prevRoom = null;
+  let roomFade = 0;
+  function currentRoom() {
+    if (!g || mode === 'attract') return 'cabinet';
+    return ['cabinet', 'cabinet', 'radio', 'labo'][g.wave] || 'cabinet';
+  }
 
   function drawBackground() {
-    ctx.drawImage(bg, 0, 0);
-    // Tracé cardiaque sur le moniteur
-    const M = MONITOR;
-    const pw = M.w - 4, ph = M.h - 4;
-    for (let i = 0; i < pw; i++) {
-      const t = (i + Math.floor(time * 24)) % 40;
-      const y = t === 18 ? -6 : t === 19 ? 5 : t === 20 ? -2 : 0;
-      const fade = i / pw;
-      ctx.fillStyle = `rgba(125, 255, 92, ${0.25 + fade * 0.6})`;
-      ctx.fillRect(M.x + 2 + i, M.y + 2 + ph / 2 + y, 1, 1);
+    const want = currentRoom();
+    if (want !== roomKey) { prevRoom = roomKey; roomKey = want; roomFade = 1; }
+    ctx.drawImage(ROOMS[roomKey], 0, 0);
+    if (roomFade > 0 && prevRoom) {
+      // Fondu rétro « en escalier » entre deux pièces
+      roomFade = Math.max(0, roomFade - 1 / 45);
+      ctx.globalAlpha = Math.round(roomFade * 6) / 6;
+      ctx.drawImage(ROOMS[prevRoom], 0, 0);
+      ctx.globalAlpha = 1;
     }
-    // Poussière qui flotte dans la lumière du scialytique
-    for (const s of stars) {
-      if (s.layer !== 2) continue;
-      const x = LAMP.x - 30 + ((s.x * 0.3 + time * 2) % 60);
-      const y = 70 + (s.y % 90);
-      ctx.fillStyle = 'rgba(255, 246, 194, 0.35)';
-      ctx.fillRect(Math.floor(x), Math.floor(y), 1, 1);
-    }
+
     ctx.globalCompositeOperation = 'lighter';
-    // Faisceau du scialytique
-    ctx.globalAlpha = 0.16 + 0.03 * Math.sin(time * 2);
-    ctx.drawImage(S.glow.yellow, LAMP.x - 50, LAMP.y - 4, 96, 150);
-    // Tube néon (vacille de temps en temps) et enseigne CAPSULE
     const flicker = Math.sin(time * 37) > 0.97 ? 0.1 : 0.35;
     ctx.globalAlpha = flicker;
-    ctx.drawImage(S.glow.cyan, 10, 8, W - 20, 20);
-    ctx.globalAlpha = 0.22 + 0.08 * Math.sin(time * 3);
-    ctx.drawImage(S.glow.magenta, W / 2 - 34, 16, 68, 22);
+    ctx.drawImage(roomKey === 'labo' ? S.glow.yellow : S.glow.cyan, 10, 8, W - 20, 20);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
+
+    if (roomKey === 'cabinet') {
+      // Tracé cardiaque sur le moniteur
+      const M = MONITOR;
+      const pw = M.w - 4, ph = M.h - 4;
+      for (let i = 0; i < pw; i++) {
+        const t = (i + Math.floor(time * 24)) % 40;
+        const y = t === 18 ? -6 : t === 19 ? 5 : t === 20 ? -2 : 0;
+        ctx.fillStyle = `rgba(125, 255, 92, ${0.25 + (i / pw) * 0.6})`;
+        ctx.fillRect(M.x + 2 + i, M.y + 2 + ph / 2 + y, 1, 1);
+      }
+      // Poussière dans la lumière du scialytique
+      for (const s of stars) {
+        if (s.layer !== 2) continue;
+        ctx.fillStyle = 'rgba(255, 246, 194, 0.35)';
+        ctx.fillRect(Math.floor(LAMP.x - 30 + ((s.x * 0.3 + time * 2) % 60)), Math.floor(70 + (s.y % 90)), 1, 1);
+      }
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.16 + 0.03 * Math.sin(time * 2);
+      ctx.drawImage(S.glow.yellow, LAMP.x - 50, LAMP.y - 4, 96, 150);
+      ctx.globalAlpha = 0.22 + 0.08 * Math.sin(time * 3);
+      ctx.drawImage(S.glow.magenta, W / 2 - 34, 16, 68, 22);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    } else if (roomKey === 'radio') {
+      // Voyant « RAYONS X » clignotant + faisceau entre le tube et le capteur
+      const on = Math.floor(time * 2) % 2 === 0;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = on ? 0.55 : 0.12;
+      ctx.drawImage(S.glow.magenta, W / 2 - 40, 12, 80, 30);
+      const scan = (time * 0.7) % 1;
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = '#7ff9ff';
+      ctx.fillRect(80, 114 + Math.round(scan * 20), 54, 1);
+      ctx.drawImage(S.glow.cyan, 90, 104 + scan * 20, 34, 20);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    } else if (roomKey === 'labo') {
+      // Four qui rougeoie + flamme du bec Bunsen
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.35 + 0.15 * Math.sin(time * 5);
+      ctx.drawImage(S.glow.yellow, FURNACE.x - 24, FURNACE.y - 24, 48, 48);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      const h = 6 + Math.round(Math.sin(time * 18) * 1.5 + Math.random());
+      ctx.fillStyle = '#3a86ff'; ctx.fillRect(BUNSEN.x - 1, 128 - h, 3, h);
+      ctx.fillStyle = '#bfeaff'; ctx.fillRect(BUNSEN.x, 128 - h + 2, 1, h - 2);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.4;
+      ctx.drawImage(S.glow.cyan, BUNSEN.x - 8, 116, 16, 16);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // Boss : le cabinet passe en alerte rouge
+    if (g && g.boss) {
+      ctx.fillStyle = `rgba(255, 30, 60, ${0.08 + 0.07 * Math.max(0, Math.sin(time * 5))})`;
+      ctx.fillRect(0, 0, W, GUM_Y);
+    }
   }
 
   function glowAt(name, x, y, alpha = 1, size = null) {
@@ -1128,19 +1279,20 @@
         return;
       }
       const def = WAVES[g.wave - 1];
-      panel(y0, 150);
+      panel(y0, 160);
       text(def.title, W / 2, y0 + 10, { scale: 2, colors: CHROME });
       text(def.name, W / 2, y0 + 32, { colors: GOLD });
+      text(`· ${def.place} ·`, W / 2, y0 + 43, { color: '#2de2e6' });
       // Tableau des points, façon borne des années 80
       const types = [...new Set(def.rows)];
       types.forEach((type, i) => {
-        const y = y0 + 48 + i * 16;
+        const y = y0 + 58 + i * 16;
         const f = Math.floor(time * 2) % 2 ? '2' : '1';
         ctx.drawImage(S[type + f], 46, y - 2);
         text(`${ENEMY[type].name}`, 66, y + 1, { align: 'left', color: '#ffffff' });
         text(`${ENEMY[type].points * g.wave} PTS`, 172, y + 1, { align: 'right', color: '#ffd319' });
       });
-      const ty = y0 + 52 + types.length * 16;
+      const ty = y0 + 62 + types.length * 16;
       text('LE SAVIEZ-VOUS ?', W / 2, ty, { color: '#2de2e6' });
       wrap(def.tip, 32).forEach((line, i) => text(line, W / 2, ty + 12 + i * 10, { color: '#cfc6f2', shadow: null }));
     }
@@ -1243,6 +1395,7 @@
       win: () => g && mode === 'play' && endGame(true),
       lose: () => g && mode === 'play' && endGame(false),
       boss: () => { if (g) { g.enemies = []; g.wave = WAVES.length; nextWave(); } },
+      wave: (n) => { if (g) { g.enemies = []; g.wave = n - 1; nextWave(); } },
     };
   }
 })();
