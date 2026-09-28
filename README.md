@@ -91,34 +91,40 @@ Les lots sont configurés dans `src/config.js` :
 - Un seul lot par compte (verrou local + tag Shopify), code à usage unique lié au client.
 - `/screen?debug` expose `Game.debug.win()` et `Game.debug.boss()` pour la recette ; le seuil de durée reste appliqué.
 
-## Recrutement de praticiens : page du site + tags `jeuJO`
+## Version site capsule-med.com (sans serveur) — recommandée
 
-Le jeu sert aussi à **inscrire un maximum de praticiens sur capsule-med.com**. Pour jouer, il faut un
-compte Capsule, sur la borne comme sur le site.
+Le jeu tourne **entièrement sur le site Capsule** : page `capsule-med.com/pages/ortho-invaders`
+(modèle de thème `inscription-test`), avec les formulaires natifs d'inscription et de connexion.
 
-| Où | Ce qui se passe | Tags posés sur la fiche client |
-|---|---|---|
-| **Page du site** `capsule-med.com/pages/ortho-invaders` (créée **en brouillon**) | Lots à gagner, règles, formulaire « Créer mon compte praticien » (profession demandée) ou « Me connecter ». Une fois connecté, le jeu s'affiche dans la page. | `jeuJO`, `jeuJO-2026`, `jeuJO-inscrit`, profession |
-| **Borne** (téléphone, `AUTH_MODE=storefront`) | Onglets « Je crée mon compte » / « J'ai un compte » : le compte est créé sur Capsule depuis le téléphone. | `jeuJO`, `jeuJO-2026`, `jeuJO-inscrit` si nouveau, profession |
-| Client existant qui joue (borne ou site) | Tagué à la connexion (API Admin). | `jeuJO`, `jeuJO-2026` (+ `jeuJO-site` s'il joue sur le site) |
-| Gagnant | Code 100 % + tags lot | `arcade-ortho-2026-gagnant`, `arcade-lot-<replay>` |
+| Étape | Ce qui se passe |
+|---|---|
+| Visiteur non connecté | Voit les lots, les règles, « Créer mon compte praticien » (profession demandée) ou « Me connecter ». |
+| Inscription | Compte Capsule créé par Shopify avec les tags `jeuJO`, `jeuJO-2026`, `jeuJO-inscrit` + profession. |
+| Connecté | Le jeu s'affiche dans la page (clavier, ou boutons tactiles sur tablette / mobile). |
+| Victoire | Le gagnant choisit son replay et confirme son email → **formulaire de contact Shopify** → email à info@capsule-med.com (compte client, score, durée, replay). |
+| Équipe Capsule | Crée le code dans Shopify › Réductions : 100 % sur le replay choisi, **client spécifique** = le gagnant, **1 utilisation**, puis l'envoie. L'email signale les parties anormalement courtes. |
+| Stand (tablette) | Bouton « Joueur suivant » = déconnexion, pour le visiteur suivant. |
 
-Segments Shopify créés (Clients › Segments) :
-- **Jeu JO 2026 — Ortho Invaders (joueurs)** : `customer_tags CONTAINS 'jeuJO-2026'`
-- **Jeu JO 2026 — nouveaux inscrits via le jeu** : `customer_tags CONTAINS 'jeuJO-inscrit'`
+Fichiers :
+- `shopify/page-ortho-invaders.html` : contenu HTML de la page (`__GAME_URL__` = URL du fichier du jeu).
+- `shopify/site-ui.js` : interface du jeu sur la page ; `tools/build-site.js` produit `shopify/ortho-invaders-site.js`
+  (jeu complet en un fichier, 68 Ko), importé dans Shopify › Contenu › Fichiers et servi par `cdn.shopify.com`.
+- Mettre à jour le jeu : `npm run check` (reconstruit le fichier), le pousser, le réimporter dans Fichiers,
+  puis remplacer `GAME_URL` dans la page.
 
-> Le tag `jeuJO` existe déjà sur 632 clients (édition 2025). `jeuJO-2026` isole les joueurs de cette année.
+Limites connues : un client **déjà inscrit** qui se connecte n'est pas tagué automatiquement (pas de
+serveur) ; le contrôle « un gain par compte » est fait par l'équipe à la création du code.
 
-**Mettre la page en ligne**
-1. Déployer ce serveur (HTTPS) et remplacer `ARCADE_URL` à la fin du HTML de la page (Boutique en ligne › Pages › Ortho Invaders › `<>`).
-2. Compléter puis publier la page **Règlement du jeu Ortho Invaders 2026** (`/pages/reglement-ortho-invaders-2026`, créée en brouillon, source dans `shopify/reglement-ortho-invaders-2026.html`, 5 passages [À COMPLÉTER] surlignés), puis faire pointer le lien « règlement du jeu » de la page du jeu vers elle.
-3. Publier la page et l'ajouter au menu ou à une bannière d'accueil. Le QR code imprimé du stand peut viser cette page.
-4. **Modèle de page : `inscription-test`** (il n'affiche que le contenu de la page). Le modèle par défaut `page` du thème affiche « Notre centre de formation » à la place du contenu : ne pas le remettre.
-5. Ne pas rouvrir la page dans l'éditeur visuel de Shopify (le script serait retiré) : l'éditer en mode HTML `<>`. La source est versionnée dans `shopify/page-ortho-invaders.html`.
+Segments Shopify (Clients › Segments) : **Jeu JO 2026 — Ortho Invaders (joueurs)** (`jeuJO-2026`)
+et **Jeu JO 2026 — nouveaux inscrits via le jeu** (`jeuJO-inscrit`). Le tag `jeuJO` existait déjà sur
+632 clients (édition 2025).
 
-Le jeu du site appelle `embed.js` et `/api/web/*` sur ce serveur (CORS limité à `STORE_ORIGINS`). Le client
-est identifié par la session Shopify de la page ; le code gagné est réservé à son compte, donc inutilisable
-par quelqu'un d'autre.
+Règlement : `shopify/reglement-ortho-invaders-2026.html` (page Shopify en brouillon, 5 passages
+[À COMPLÉTER]). Une fois publié, faire pointer le lien « règlement du jeu » de la page vers
+`/pages/reglement-ortho-invaders-2026`. Toujours éditer ces pages en mode HTML `<>`.
+
+La borne avec téléphone-manette et création automatique des codes (serveur Node ci-dessus, `embed.js`,
+`/api/web/*`) reste disponible si vous souhaitez l'héberger plus tard.
 
 ## Déployer pour l'événement
 
