@@ -95,7 +95,7 @@ Les lots sont configurés dans `src/config.js` :
 
 La page `capsule-med.com/pages/ortho-invaders` (modèle `inscription-test`) **est la borne d'arcade** :
 plein écran dès l'ouverture, « INSERT COIN », puis inscription ou connexion Capsule **dans l'écran de la borne**
-(formulaires natifs Shopify), et le jeu démarre. Fichier du jeu : Contenu › Fichiers › `ortho-invaders-borne-v8.js`.
+(formulaires natifs Shopify), et le jeu démarre. Fichier du jeu : Contenu › Fichiers › `ortho-invaders-borne-v9.js`.
 
 | Étape | Ce qui se passe |
 |---|---|
@@ -103,7 +103,7 @@ plein écran dès l'ouverture, « INSERT COIN », puis inscription ou connexion 
 | Inscription | Compte Capsule créé par Shopify avec les tags `jeuJO`, `jeuJO-2026`, `jeuJO-inscrit` + profession. |
 | Connecté | Le jeu s'affiche dans la page (clavier, ou boutons tactiles sur tablette / mobile). |
 | Victoire | Le gagnant choisit son replay et confirme son email → **formulaire de contact Shopify** → email à info@capsule-med.com (compte client, score, durée, replay). |
-| Une partie par personne | Après la partie : déconnexion automatique (12 s si perdu ; 2 min pour valider le gain puis 20 s si gagné). Un participant qui se reconnecte sur le même appareil voit « Partie jouée » et est déconnecté. L'équipe peut autoriser une nouvelle partie avec `?reset` dans l'adresse. |
+| Une partie par personne | Après la partie : déconnexion automatique (12 s si perdu ; 2 min pour valider le gain puis 20 s si gagné). Un participant qui se reconnecte sur le même appareil voit « Partie jouée » et est déconnecté. L'équipe peut autoriser une nouvelle partie avec `?reset` dans l'adresse. Comptes de test (parties illimitées, emails marqués « COMPTE TEST ») : liste `TESTERS` (identifiants clients Shopify) dans `shopify/site-ui.js`. |
 | Équipe Capsule | Crée le code dans Shopify › Réductions : 100 % sur le replay choisi, **client spécifique** = le gagnant, **1 utilisation**, puis l'envoie. L'email signale les parties anormalement courtes. |
 | Stand (tablette) | Ouvrir **`capsule-med.com/pages/ortho-invaders?borne`** : plein écran (sans barre du navigateur) dès le premier toucher, lien site masqué, et retour en mode borne après « Joueur suivant » (déconnexion). Bouton « ⛶ Plein écran » disponible pour tous. |
 

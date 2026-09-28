@@ -1794,6 +1794,9 @@ window.__orthoInvadersGame = function () {
   ];
   const WON_KEY = `orthoInvadersWon:${customerId}`;
   const PLAYED_KEY = `orthoInvadersPlayed:${customerId}`; // une seule partie par participant
+  // Comptes de test Capsule (identifiants clients Shopify) : parties illimitées, pas de déconnexion auto
+  const TESTERS = ['23773949821273'];
+  const TESTER = logged && TESTERS.includes(String(customerId));
   const LOGOUT_URL = `/account/logout?return_url=${encodeURIComponent(PAGE + (STAND ? '?borne' : ''))}`;
   // Remise à zéro par l'équipe (ex. partie interrompue) : ouvrir la page avec ?reset
   if (new URLSearchParams(location.search).has('reset')) {
@@ -1983,6 +1986,7 @@ window.__orthoInvadersGame = function () {
           </form>
           <p class="ca-p ca-count" id="ca-end-count"></p>
           <a class="ca-btn alt" id="ca-next" href="#">▶ Joueur suivant</a>
+          <button type="button" class="ca-btn ca-retry" hidden>↻ Rejouer (compte test)</button>
         </div></div>
 
         <div class="ca-ov" id="ca-sent" hidden><div class="ca-card">
@@ -1990,6 +1994,7 @@ window.__orthoInvadersGame = function () {
           <p class="ca-p">Votre victoire est enregistrée. L'équipe Capsule crée votre code personnel (100 %, usage unique, lié à votre compte) et vous l'envoie par email. Sur le stand : présentez cet écran.</p>
           <p class="ca-p ca-count" id="ca-sent-count"></p>
           <a class="ca-btn alt ca-next" href="#">▶ Joueur suivant</a>
+          <button type="button" class="ca-btn ca-retry" hidden>↻ Rejouer (compte test)</button>
         </div></div>
 
         <div class="ca-ov" id="ca-done" hidden><div class="ca-card">
@@ -2011,6 +2016,7 @@ window.__orthoInvadersGame = function () {
       <button class="ca-fire" id="ca-fire" aria-label="Tirer">TIR</button>
     </div>
     <div class="ca-bar">
+      ${TESTER ? '<span style="color:#ffd319">★ COMPTE TEST · PARTIES ILLIMITÉES</span>' : ''}
       <span class="ca-keys">← → BOUGER · ESPACE TIRER · P PAUSE</span>
       <button type="button" class="ca-fs" id="ca-fs" hidden>⛶ PLEIN ÉCRAN</button>
       ${logged ? `<a href="/account/logout?return_url=${encodeURIComponent(PAGE + (STAND ? '?borne' : ''))}">▶ JOUEUR SUIVANT (DÉCONNEXION)</a>` : ''}
@@ -2088,6 +2094,7 @@ window.__orthoInvadersGame = function () {
   let countdown = null;
   function logoutIn(seconds, elId, label) {
     clearInterval(countdown);
+    if (TESTER) { $(elId).textContent = 'Compte test : pas de déconnexion automatique'; return; }
     let left = seconds;
     const tick = () => {
       $(elId).textContent = `${label} dans ${left} s`;
@@ -2098,10 +2105,10 @@ window.__orthoInvadersGame = function () {
   }
 
   const posted = new URLSearchParams(location.search).get('contact_posted') === 'true';
-  if (posted && store.get(WON_KEY)) {
+  if (posted && (store.get(WON_KEY) || (TESTER && store.get('orthoInvadersTestSent')))) {
     show('ca-sent');
     logoutIn(20, 'ca-sent-count', 'Déconnexion automatique');
-  } else if (store.get(PLAYED_KEY)) {
+  } else if (store.get(PLAYED_KEY) && !TESTER) {
     show('ca-done');
     logoutIn(10, 'ca-done-count', 'Déconnexion automatique');
   } else {
@@ -2109,8 +2116,10 @@ window.__orthoInvadersGame = function () {
   }
 
   function play() {
-    if (store.get(PLAYED_KEY)) { show('ca-done'); logoutIn(10, 'ca-done-count', 'Déconnexion automatique'); return; }
-    store.set(PLAYED_KEY, String(Date.now()));
+    if (!TESTER) {
+      if (store.get(PLAYED_KEY)) { show('ca-done'); logoutIn(10, 'ca-done-count', 'Déconnexion automatique'); return; }
+      store.set(PLAYED_KEY, String(Date.now()));
+    }
     Sfx.unlock();
     show(null);
     document.activeElement?.blur?.();
@@ -2149,7 +2158,7 @@ window.__orthoInvadersGame = function () {
     if (!reward || !last) { e.preventDefault(); return; }
     const when = new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
     $('ca-body').value = [
-      'NOUVEAU GAGNANT — ORTHO INVADERS',
+      TESTER ? '[COMPTE TEST — ne pas créer de code]' : 'NOUVEAU GAGNANT — ORTHO INVADERS',
       last.seconds < 90 ? '⚠ PARTIE ANORMALEMENT COURTE (moins de 90 s) : vérifier avant de créer le code.' : 'Durée de partie normale.',
       `Replay choisi : ${reward.title} (${reward.speaker})`,
       `Email déclaré : ${$('ca-email').value}`,
@@ -2161,11 +2170,13 @@ window.__orthoInvadersGame = function () {
       'À faire : Réductions > Créer > Montant de réduction sur les produits, 100 %, produit = replay choisi,',
       'Admissibilité = ce client uniquement, Limite = 1 utilisation. Puis envoyer le code au gagnant.',
     ].join('\n');
-    store.set(WON_KEY, reward.id);
+    if (!TESTER) store.set(WON_KEY, reward.id);
+    else store.set(`orthoInvadersTestSent`, '1');
     clearInterval(countdown);
   });
 
   $('ca-play').addEventListener('click', play);
+  root.querySelectorAll('.ca-retry').forEach((b) => { b.hidden = !TESTER; b.addEventListener('click', play); });
 
   function pause() {
     if (!window.Game || ['attract', 'over'].includes(Game.mode) || Game.paused) return;
