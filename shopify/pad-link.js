@@ -116,18 +116,20 @@
     #capsule-arcade{position:fixed!important;inset:0!important;z-index:2147483000;margin:0!important;padding:0!important;display:block!important;
       width:auto!important;height:auto!important;border-radius:0!important;text-align:left!important;min-height:0!important;
       background:radial-gradient(ellipse at 50% 0%,rgba(157,78,221,.35),transparent 60%),linear-gradient(180deg,#0b0322,#05010f 70%)!important}
-    .mp{--c:#2de2e6;--m:#ff2a6d;--y:#ffd319;--v:#9d4edd;box-sizing:border-box;height:100%;display:grid;grid-template-rows:auto 1fr auto;gap:3vh;
-      padding:max(14px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));color:#f5f3ff;font-family:'VT323',monospace;
+    .mp{--c:#2de2e6;--m:#ff2a6d;--y:#ffd319;--v:#9d4edd;box-sizing:border-box;height:100%;display:grid;gap:2.4vh 12px;
+      grid-template-columns:1fr 1fr;grid-template-rows:auto minmax(0,1fr) auto auto;
+      grid-template-areas:"top top" "mid mid" "small small" "dirs fire";
+      padding:max(14px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(22px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));color:#f5f3ff;font-family:'VT323',monospace;
       user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none}
     .mp *{box-sizing:border-box}
     .mp [hidden]{display:none!important}
-    .mp-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .mp-top{grid-area:top;display:flex;justify-content:space-between;align-items:center;gap:10px}
     .mp-brand{font-family:'Press Start 2P',monospace;font-size:12px;letter-spacing:.3em;color:#fff;text-shadow:0 0 8px var(--m)}
     .mp-dot{font-family:'Press Start 2P',monospace;font-size:9px;color:#8f82b8;display:flex;align-items:center;gap:8px}
     .mp-dot::before{content:'';width:10px;height:10px;border-radius:50%;background:#ff2a6d;box-shadow:0 0 8px #ff2a6d}
     .mp.on .mp-dot{color:var(--c)}
     .mp.on .mp-dot::before{background:#39ff88;box-shadow:0 0 8px #39ff88}
-    .mp-mid{display:grid;align-content:center;justify-items:center;gap:2vh;text-align:center}
+    .mp-mid{grid-area:mid;display:grid;align-content:center;justify-items:center;gap:2vh;text-align:center}
     .mp-title{font-family:'Press Start 2P',monospace;font-size:clamp(16px,6vw,26px);line-height:1.3;
       background:linear-gradient(180deg,#fff 10%,var(--c) 55%,#2d6cdf);-webkit-background-clip:text;background-clip:text;color:transparent}
     .mp-msg{font-size:clamp(22px,7vw,32px);line-height:1.1;color:#ffd1f4;max-width:22ch}
@@ -136,17 +138,35 @@
     .mp-form input{font-family:'Press Start 2P',monospace;font-size:28px;letter-spacing:.3em;text-align:center;width:9ch;padding:12px 6px;
       color:#fff;background:#12062e;border:3px solid var(--c);border-radius:0;text-transform:uppercase;user-select:text;-webkit-user-select:text}
     .mp-btn{font-family:'Press Start 2P',monospace;font-size:13px;color:#12062e;background:var(--y);border:0;padding:14px 18px;box-shadow:0 4px 0 #b8900a}
-    .mp-pads{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:14px;height:min(52vh,420px)}
-    .mp-pads button{touch-action:none;border:0;color:#fff;font-family:'Press Start 2P',monospace;-webkit-tap-highlight-color:transparent}
-    .mp-dirs{display:grid;grid-template-columns:1fr 1fr;gap:14px;grid-column:1/-1}
-    .mp-dir{background:#1f0b4a;border:4px solid var(--c)!important;font-size:34px;box-shadow:0 6px 0 #178a8d;min-height:22vh}
-    .mp-fire{grid-column:1/-1;justify-self:center;border-radius:50%;aspect-ratio:1;height:min(24vh,190px);font-size:16px;
+    /* Deux pouces : ◀ ▶ sous le pouce gauche, TIR sous le pouce droit (inversé en mode gaucher) */
+    .mp button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+    .mp-dir,.mp-fire{touch-action:none;border:0;color:#fff;font-family:'Press Start 2P',monospace}
+    .mp-dirs{grid-area:dirs;justify-self:start;align-self:end;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .mp-dir{width:clamp(72px,21vw,120px);height:clamp(100px,17vh,170px);background:#1f0b4a;border:4px solid var(--c)!important;font-size:30px;box-shadow:0 6px 0 #178a8d}
+    .mp-fire{grid-area:fire;justify-self:end;align-self:end;width:clamp(120px,36vw,200px);aspect-ratio:1;border-radius:50%;font-size:16px;
       background:radial-gradient(circle at 35% 30%,#ff7ba3,var(--m) 55%,#8f0f3a);box-shadow:0 7px 0 #6d0a2c,0 0 28px var(--m)}
     .mp-dir.down{background:#2a1566;transform:translateY(4px);box-shadow:0 2px 0 #178a8d}
     .mp-fire.down{transform:translateY(5px);box-shadow:0 2px 0 #6d0a2c,0 0 36px var(--m)}
-    .mp-small{display:flex;justify-content:space-between;gap:10px}
-    .mp-small button{font-family:'Press Start 2P',monospace;font-size:10px;color:#b9a8e8;background:transparent;border:2px solid #3b2470;padding:10px 12px}
-    .mp.off .mp-pads,.mp.off .mp-small .mp-pause{opacity:.35}
+    .mp-small{grid-area:small;display:flex;justify-content:space-between;gap:8px}
+    .mp-small button{font-family:'Press Start 2P',monospace;font-size:9px;color:#b9a8e8;background:transparent;border:2px solid #3b2470;padding:10px 10px}
+    .mp.lefty{grid-template-areas:"top top" "mid mid" "small small" "fire dirs"}
+    .mp.lefty .mp-dirs{justify-self:end}
+    .mp.lefty .mp-fire{justify-self:start}
+    /* Téléphone à l'horizontale : prise en main façon manette de console */
+    @media (orientation:landscape) and (max-height:600px){
+      .mp{grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr) auto;gap:10px 18px;
+        grid-template-areas:"top top top" "dirs mid fire" "dirs small fire";padding-top:max(10px,env(safe-area-inset-top))}
+      .mp.lefty{grid-template-areas:"top top top" "fire mid dirs" "fire small dirs"}
+      .mp-dirs,.mp.lefty .mp-dirs{align-self:center;justify-self:center}
+      .mp-fire,.mp.lefty .mp-fire{align-self:center;justify-self:center;width:auto;height:min(62vh,230px)}
+      .mp-dir{width:clamp(70px,11vw,120px);height:min(58vh,220px)}
+      .mp-title{display:none}
+      .mp-msg{font-size:clamp(18px,3.4vw,26px)}
+      .mp-small{justify-content:center;flex-wrap:wrap}
+      .mp-form{gap:8px}
+      .mp-form input{font-size:22px;padding:8px 6px}
+    }
+    .mp.off .mp-dirs,.mp.off .mp-fire,.mp.off .mp-pause{opacity:.35}
     `;
     document.head.appendChild(style);
 
@@ -163,19 +183,16 @@
         <div class="mp-msg" id="mp-msg"></div>
         <div class="mp-hud" id="mp-hud"></div>
       </div>
-      <div>
-        <div class="mp-pads" id="mp-pads">
-          <div class="mp-dirs">
-            <button class="mp-dir" data-dir="-1" aria-label="Gauche">◀</button>
-            <button class="mp-dir" data-dir="1" aria-label="Droite">▶</button>
-          </div>
-          <button class="mp-fire" id="mp-fire" aria-label="Tirer">TIR</button>
-        </div>
-        <div class="mp-small" style="margin-top:2.4vh">
-          <button type="button" id="mp-change">CODE ${'·'}</button>
-          <button type="button" class="mp-pause" id="mp-pause">❚❚ PAUSE</button>
-        </div>
+      <div class="mp-small">
+        <button type="button" id="mp-change">CODE</button>
+        <button type="button" id="mp-hand" aria-pressed="false">GAUCHER</button>
+        <button type="button" class="mp-pause" id="mp-pause">❚❚ PAUSE</button>
       </div>
+      <div class="mp-dirs">
+        <button class="mp-dir" data-dir="-1" aria-label="Gauche">◀</button>
+        <button class="mp-dir" data-dir="1" aria-label="Droite">▶</button>
+      </div>
+      <button class="mp-fire" id="mp-fire" aria-label="Tirer">TIR</button>
     </div>`;
 
     const $ = (id) => document.getElementById(id);
@@ -277,6 +294,15 @@
     });
     $('mp-change').addEventListener('click', () => { try { conn?.close(); } catch {} conn = null; clearTimeout(retry); askCode(); $('mp-code').focus(); });
     $('mp-pause').addEventListener('click', () => send({ t: 'act', a: 'pause' }));
+    // Mode gaucher : TIR à gauche, ◀ ▶ à droite (mémorisé sur le téléphone)
+    const setHand = (lefty) => {
+      ui.classList.toggle('lefty', lefty);
+      $('mp-hand').textContent = lefty ? 'DROITIER' : 'GAUCHER';
+      $('mp-hand').setAttribute('aria-pressed', String(lefty));
+      store.set('orthoPadLefty', lefty ? '1' : '');
+    };
+    setHand(store.get('orthoPadLefty') === '1');
+    $('mp-hand').addEventListener('click', () => setHand(!ui.classList.contains('lefty')));
 
     const held = new Map();
     const upd = () => {
