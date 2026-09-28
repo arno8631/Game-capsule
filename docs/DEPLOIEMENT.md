@@ -1,3 +1,28 @@
+# Manette du stand (recommandé) : un téléphone Capsule dédié, sans serveur
+
+Aucune appli, aucun hébergement : le téléphone du stand se relie directement à l'iPad
+(liaison pair-à-pair WebRTC, service de mise en relation gratuit PeerJS).
+
+1. **iPad** : ouvrir `https://capsule-med.com/pages/ortho-invaders?borne`.
+   En bas de la borne s'affiche `MANETTE : CODE XXXXX` (code propre à cet iPad, conservé).
+2. **Téléphone du stand** (iPhone ou Android) : ouvrir
+   `https://capsule-med.com/pages/ortho-invaders?manette=XXXXX`, puis *Partager › Sur l'écran d'accueil*.
+   Le code est mémorisé : les fois suivantes, il suffit d'ouvrir l'icône.
+3. Le voyant passe au vert (**CONNECTÉ**) : les boutons tactiles de l'iPad disparaissent,
+   l'écran de jeu prend toute la hauteur, et le code n'est plus affiché.
+4. Déroulé d'une partie : le praticien se connecte **sur l'iPad** et touche **JOUER**
+   (ce toucher active le son et le plein écran), puis joue au téléphone (◀ ▶ TIR, PAUSE).
+
+Bon à savoir :
+- une seule manette à la fois : une autre qui tente de se connecter est refusée ;
+- si le téléphone se met en veille ou perd le réseau, il se reconnecte seul ;
+  la borne relâche les commandes au bout de 1,5 s de silence et réaffiche le code après 8 s ;
+- idéalement iPad et téléphone sur le **même Wi-Fi** (ou l'iPad sur le partage de connexion
+  du téléphone) : c'est la liaison la plus rapide. En 4G, ça passe par un relais, un peu moins réactif ;
+- `?borne&local` n'est pas nécessaire : sans téléphone relié, les boutons tactiles de l'iPad restent actifs.
+
+---
+
 # Mise en ligne du mode « téléphone-manette »
 
 L'iPad du stand affiche la borne (page capsule-med.com/pages/ortho-invaders). Le visiteur scanne le QR code,

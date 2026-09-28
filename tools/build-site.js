@@ -13,6 +13,7 @@ const bundle = [
   'window.__orthoInvadersGame = function () {',
   read('public/js/game.js'),
   '};',
+  read('shopify/pad-link.js'),
   read('shopify/site-ui.js'),
 ].join('\n');
 

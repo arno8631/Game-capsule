@@ -5,6 +5,9 @@
 (function () {
   const root = document.getElementById('capsule-arcade');
   if (!root) return;
+  // Téléphone du stand : ?manette → la page devient la manette de la borne (voir pad-link.js)
+  const qsPad = new URLSearchParams(location.search);
+  if (qsPad.has('manette') && window.__orthoPad) { window.__orthoPad.phone(root, qsPad.get('manette')); return; }
   // La borne sort de la section du thème (calques, carrousels, transformations) et se place
   // directement dans <body>, au-dessus de tout ; le reste du site est masqué (voir CSS).
   document.body.appendChild(root);
@@ -124,6 +127,8 @@
     background:radial-gradient(circle at 35% 30%,#ff7ba3,var(--m) 55%,#8f0f3a);box-shadow:0 6px 0 #6d0a2c,0 0 24px var(--m)}
   .ca-fire.down{transform:translateY(4px)}
   /* En partie : on libère un max de place pour l'écran de jeu */
+  .ca.paired .ca-pad{display:none!important}
+  .ca-bar .ca-padcode{color:#2de2e6}
   .ca.playing{gap:.6vh}
   .ca.playing .ca-bar{display:none}
   .ca.playing .ca-head{gap:0;padding:max(.6vh,env(safe-area-inset-top)) 16px .6vh}
@@ -289,6 +294,7 @@
     </div>
     <div class="ca-bar">
       ${TESTER ? '<span style="color:#ffd319">★ COMPTE TEST · PARTIES ILLIMITÉES</span>' : ''}
+      <span class="ca-padcode" id="ca-pad-code" hidden></span>
       <span class="ca-keys">← → BOUGER · ESPACE TIRER · P PAUSE</span>
       <button type="button" class="ca-fs" id="ca-fs" hidden>⛶ PLEIN ÉCRAN</button>
       ${logged ? `<a href="/account/logout?return_url=${encodeURIComponent(PAGE + (STAND ? '?borne' : ''))}">▶ JOUEUR SUIVANT (DÉCONNEXION)</a>` : ''}
@@ -336,10 +342,33 @@
   }
 
   const overlays = ['ca-coin', 'ca-register', 'ca-login', 'ca-start', 'ca-end', 'ca-sent', 'ca-done', 'ca-pause', 'ca-r-attract', 'ca-r-ready', 'ca-r-winner', 'ca-r-off'];
+  const PAD_STATES = { 'ca-pause': 'pause', 'ca-start': 'start', 'ca-end': 'end', 'ca-sent': 'end', 'ca-done': 'end' };
+  let padState = 'coin';
   const show = (id) => {
     overlays.forEach((o) => { $(o).hidden = o !== id; });
     root.querySelector('.ca').classList.toggle('playing', id === null || id === 'ca-pause');
+    padState = id === null ? 'play' : PAD_STATES[id] || 'coin';
+    pad?.send({ t: 'st', s: padState });
   };
+
+  // ── Manette du stand : un téléphone Capsule dédié, relié en direct à l'iPad (?borne) ──
+  const padActions = {};
+  let pad = null;
+  if (STAND && !REMOTE && window.__orthoPad) {
+    const ca = root.querySelector('.ca');
+    pad = window.__orthoPad.screen({
+      onInput: (s) => window.Game?.setRemote(s),
+      onAction: (a) => padActions[a]?.(),
+      onStatus: (on) => {
+        ca.classList.toggle('paired', on);
+        $('ca-pad-code').hidden = on; // le code n'est affiché que tant qu'aucune manette n'est reliée
+        setTimeout(() => window.Game?.fit?.(), 50);
+        if (on) pad.send({ t: 'st', s: padState });
+      },
+    });
+    $('ca-pad-code').textContent = `MANETTE : CODE ${pad.code}`;
+    $('ca-pad-code').hidden = false;
+  }
   syncFs();
 
   root.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
@@ -471,7 +500,7 @@
     show(null);
     document.activeElement?.blur?.();
     startedAt = Date.now();
-    Game.start({ name: 'DOCTEUR', onEnd: end });
+    Game.start({ name: 'DOCTEUR', onEnd: end, onFeedback: (d) => pad?.send({ t: 'fb', ...d }) });
   }
 
   function end({ won, score, wave }) {
@@ -536,7 +565,12 @@
   addEventListener('keyup', (e) => {
     if (e.code === 'Space' && window.Game && !['attract', 'over'].includes(Game.mode)) e.preventDefault();
   }, true);
-  $('ca-resume').addEventListener('click', () => { show(null); Game.paused = false; });
+  const resume = () => { show(null); Game.paused = false; };
+  $('ca-resume').addEventListener('click', resume);
+  // Manette du stand : TIR reprend après une pause, PAUSE bascule. Le lancement reste sur l'iPad (JOUER),
+  // ce premier toucher débloquant le son et le plein écran.
+  padActions.fire = () => { if (Game.paused) resume(); };
+  padActions.pause = () => { if (Game.paused) resume(); else pause(); };
 
   // Manette tactile (tablette du stand, mobile)
   const st = { x: 0, fire: false };
