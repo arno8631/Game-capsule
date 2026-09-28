@@ -11,6 +11,10 @@
   const logged = Boolean(customerId);
 
   const PAGE = location.pathname;
+  // Mode stand (tablette de la borne) : ?borne dans l'adresse → plein écran au premier toucher,
+  // et on revient en mode stand après chaque déconnexion « Joueur suivant ».
+  const STAND = new URLSearchParams(location.search).has('borne') || (() => { try { return sessionStorage.getItem('orthoStand') === '1'; } catch { return false; } })();
+  if (STAND) { try { sessionStorage.setItem('orthoStand', '1'); } catch {} }
   const RULES = root.dataset.rules || '/pages/reglements-jeux-jo-2025';
   const REWARDS = [
     { id: 'biomecanique', speaker: 'Dr Skander Ellouze', title: 'Replay Biomécanique : maîtriser les clés de l’excellence en orthodontie' },
@@ -96,6 +100,10 @@
   .ca-fire.down{transform:translateY(4px)}
   .ca-bar{display:flex;gap:6px 18px;justify-content:center;flex-wrap:wrap;align-items:center}
   .ca-bar a,.ca-bar span{font-family:'Press Start 2P',monospace;font-size:10px;color:#8f82b8;line-height:1.8}
+  #capsule-arcade .ca-fs{font-family:'Press Start 2P',monospace;font-size:11px;line-height:1;color:#12062e;background:var(--c);border:0;
+    padding:9px 12px;cursor:pointer;box-shadow:0 3px 0 #178a8d}
+  #capsule-arcade .ca-fs:active{transform:translateY(2px);box-shadow:0 1px 0 #178a8d}
+  .ca.stand .ca-site{display:none}
   @media (prefers-reduced-motion:reduce){.ca-blink{animation:none}}
   `;
   const style = document.createElement('style');
@@ -106,7 +114,7 @@
   const back = encodeURIComponent(PAGE);
 
   root.innerHTML = `
-  <div class="ca${logged ? ' logged' : ''}">
+  <div class="ca${logged ? ' logged' : ''}${STAND ? ' stand' : ''}">
     <header class="ca-head"><span class="b">CAPSULE</span><span class="t">ORTHO INVADERS</span><span class="s">Défendez l'arcade dentaire !</span></header>
     <div class="ca-stage" data-fit>
       <div class="ca-screen">
@@ -214,9 +222,10 @@
     </div>
     <div class="ca-bar">
       <span class="ca-keys">← → BOUGER · ESPACE TIRER · P PAUSE</span>
-      ${logged ? `<a href="/account/logout?return_url=${back}">▶ JOUEUR SUIVANT (DÉCONNEXION)</a>` : ''}
+      <button type="button" class="ca-fs" id="ca-fs" hidden>⛶ PLEIN ÉCRAN</button>
+      ${logged ? `<a href="/account/logout?return_url=${encodeURIComponent(PAGE + (STAND ? '?borne' : ''))}">▶ JOUEUR SUIVANT (DÉCONNEXION)</a>` : ''}
       <a href="${esc(RULES)}" target="_blank" rel="noopener">RÈGLEMENT</a>
-      <a href="/">CAPSULE-MED.COM</a>
+      <a class="ca-site" href="/">CAPSULE-MED.COM</a>
     </div>
   </div>`;
 
@@ -229,8 +238,38 @@
 
   const $ = (id) => document.getElementById(id);
   if (matchMedia('(pointer: coarse)').matches) root.querySelector('.ca').classList.add('touch');
+  // ── Plein écran (masque la barre d'adresse et les onglets du navigateur) ──
+  const docEl = document.documentElement;
+  const fsSupported = Boolean(docEl.requestFullscreen || docEl.webkitRequestFullscreen);
+  const isFull = () => Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+  async function enterFull() {
+    try {
+      if (docEl.requestFullscreen) await docEl.requestFullscreen({ navigationUI: 'hide' });
+      else docEl.webkitRequestFullscreen();
+    } catch {}
+    try { await screen.orientation?.lock?.('portrait'); } catch {}
+  }
+  function exitFull() {
+    try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch {}
+  }
+  function syncFs() {
+    const b = $('ca-fs');
+    b.hidden = !fsSupported;
+    b.textContent = isFull() ? '✕ QUITTER LE PLEIN ÉCRAN' : '⛶ PLEIN ÉCRAN';
+    setTimeout(() => window.Game?.fit?.(), 50);
+  }
+  $('ca-fs').addEventListener('click', () => (isFull() ? exitFull() : enterFull()));
+  document.addEventListener('fullscreenchange', syncFs);
+  document.addEventListener('webkitfullscreenchange', syncFs);
+  if (STAND && fsSupported) {
+    // Les navigateurs exigent un geste : le premier toucher sur la borne passe en plein écran.
+    const auto = (e) => { if (!isFull() && !e.target.closest('input,select,textarea')) enterFull(); };
+    root.addEventListener('pointerdown', auto, { capture: true });
+  }
+
   const overlays = ['ca-coin', 'ca-register', 'ca-login', 'ca-start', 'ca-end', 'ca-sent', 'ca-pause'];
   const show = (id) => overlays.forEach((o) => { $(o).hidden = o !== id; });
+  syncFs();
 
   root.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => {
     show(b.dataset.go);

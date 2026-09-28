@@ -95,7 +95,7 @@ Les lots sont configurés dans `src/config.js` :
 
 La page `capsule-med.com/pages/ortho-invaders` (modèle `inscription-test`) **est la borne d'arcade** :
 plein écran dès l'ouverture, « INSERT COIN », puis inscription ou connexion Capsule **dans l'écran de la borne**
-(formulaires natifs Shopify), et le jeu démarre. Fichier du jeu : Contenu › Fichiers › `ortho-invaders-borne-v3.js`.
+(formulaires natifs Shopify), et le jeu démarre. Fichier du jeu : Contenu › Fichiers › `ortho-invaders-borne-v4.js`.
 
 | Étape | Ce qui se passe |
 |---|---|
@@ -104,7 +104,7 @@ plein écran dès l'ouverture, « INSERT COIN », puis inscription ou connexion 
 | Connecté | Le jeu s'affiche dans la page (clavier, ou boutons tactiles sur tablette / mobile). |
 | Victoire | Le gagnant choisit son replay et confirme son email → **formulaire de contact Shopify** → email à info@capsule-med.com (compte client, score, durée, replay). |
 | Équipe Capsule | Crée le code dans Shopify › Réductions : 100 % sur le replay choisi, **client spécifique** = le gagnant, **1 utilisation**, puis l'envoie. L'email signale les parties anormalement courtes. |
-| Stand (tablette) | Bouton « Joueur suivant » = déconnexion, pour le visiteur suivant. |
+| Stand (tablette) | Ouvrir **`capsule-med.com/pages/ortho-invaders?borne`** : plein écran (sans barre du navigateur) dès le premier toucher, lien site masqué, et retour en mode borne après « Joueur suivant » (déconnexion). Bouton « ⛶ Plein écran » disponible pour tous. |
 
 Fichiers :
 - `shopify/page-ortho-invaders.html` : contenu HTML de la page (`__GAME_URL__` = URL du fichier du jeu).
