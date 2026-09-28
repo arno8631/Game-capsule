@@ -21,6 +21,7 @@ function save(name, value) {
 
 const scores = load('scores', []);
 const winners = load('winners', {});
+const played = load('played', {}); // une partie par participant
 
 module.exports = {
   addScore(entry) {
@@ -43,6 +44,11 @@ module.exports = {
       .map(({ name, score, won }) => ({ name, score, won }));
   },
 
+  hasPlayed: (customerId) => Boolean(played[customerId]),
+  markPlayed(customerId) {
+    played[customerId] = new Date().toISOString();
+    save('played', played);
+  },
   getWinner: (customerId) => winners[customerId],
   prizesGiven: () => Object.keys(winners).length,
   saveWinner(customerId, record) {

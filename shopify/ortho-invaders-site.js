@@ -1787,6 +1787,15 @@ window.__orthoInvadersGame = function () {
   // et on revient en mode stand après chaque déconnexion « Joueur suivant ».
   const STAND = new URLSearchParams(location.search).has('borne') || (() => { try { return sessionStorage.getItem('orthoStand') === '1'; } catch { return false; } })();
   if (STAND) { try { sessionStorage.setItem('orthoStand', '1'); } catch {} }
+  // Mode téléphone-manette (iPad du stand) : ?borne&serveur=https://…&cle=… une seule fois, mémorisé ;
+  // ?local revient au jeu tactile sur la tablette.
+  const qs = new URLSearchParams(location.search);
+  let REMOTE = null;
+  try {
+    if (qs.has('local')) localStorage.removeItem('orthoRemote');
+    if (qs.get('serveur')) localStorage.setItem('orthoRemote', JSON.stringify({ server: qs.get('serveur').replace(/\/$/, ''), key: qs.get('cle') || '' }));
+    REMOTE = STAND ? JSON.parse(localStorage.getItem('orthoRemote') || 'null') : null;
+  } catch {}
   const RULES = root.dataset.rules || '/pages/reglements-jeux-jo-2025';
   const REWARDS = [
     { id: 'biomecanique', speaker: 'Dr Skander Ellouze', title: 'Replay Biomécanique : maîtriser les clés de l’excellence en orthodontie' },
@@ -2004,6 +2013,31 @@ window.__orthoInvadersGame = function () {
           <a class="ca-btn alt ca-next" href="#">▶ Joueur suivant</a>
         </div></div>
 
+        <!-- Mode téléphone-manette -->
+        <div class="ca-ov" id="ca-r-attract" hidden><div class="ca-card">
+          <p class="ca-t big ca-blink">SCANNEZ<br>POUR JOUER</p>
+          <img id="ca-r-qr" alt="QR code pour jouer avec votre téléphone" style="width:52cqw;justify-self:center;image-rendering:pixelated;border:2cqw solid #fff;box-shadow:0 0 0 1cqw var(--m),0 0 8cqw var(--m)">
+          <p class="ca-p">Votre téléphone devient la manette. Connectez-vous avec votre compte Capsule, ou créez-le en 30 s.</p>
+          <p class="ca-h">★ À GAGNER ★</p>
+          <div class="ca-prizes">${prizeCards}</div>
+          <p class="ca-count" id="ca-r-queue"></p>
+        </div></div>
+        <div class="ca-ov" id="ca-r-ready" hidden><div class="ca-card">
+          <p class="ca-p">AU TOUR DE</p>
+          <p class="ca-t big" id="ca-r-name"></p>
+          <p class="ca-t ca-blink">▶ START<br>SUR VOTRE TÉLÉPHONE</p>
+          <p class="ca-count" id="ca-r-count"></p>
+        </div></div>
+        <div class="ca-ov" id="ca-r-winner" hidden><div class="ca-card">
+          <p class="ca-t big">★ GAGNANT ★</p>
+          <p class="ca-t" id="ca-r-wname" style="color:var(--c)"></p>
+          <p class="ca-p" id="ca-r-wwhat"></p>
+        </div></div>
+        <div class="ca-ov" id="ca-r-off" hidden><div class="ca-card">
+          <p class="ca-t">CONNEXION<br>À LA BORNE…</p>
+          <p class="ca-p" id="ca-r-err">Vérifiez le Wi-Fi de la tablette.</p>
+        </div></div>
+
         <div class="ca-ov" id="ca-pause" hidden><div class="ca-card">
           <p class="ca-t big">PAUSE</p>
           <button type="button" class="ca-btn" id="ca-resume">▶ Reprendre</button>
@@ -2063,7 +2097,7 @@ window.__orthoInvadersGame = function () {
     root.addEventListener('pointerdown', auto, { capture: true });
   }
 
-  const overlays = ['ca-coin', 'ca-register', 'ca-login', 'ca-start', 'ca-end', 'ca-sent', 'ca-done', 'ca-pause'];
+  const overlays = ['ca-coin', 'ca-register', 'ca-login', 'ca-start', 'ca-end', 'ca-sent', 'ca-done', 'ca-pause', 'ca-r-attract', 'ca-r-ready', 'ca-r-winner', 'ca-r-off'];
   const show = (id) => overlays.forEach((o) => { $(o).hidden = o !== id; });
   syncFs();
 
@@ -2078,6 +2112,78 @@ window.__orthoInvadersGame = function () {
     const prof = $('ca-prof').value;
     if (prof) $('ca-tags').value = `jeuJO, jeuJO-2026, jeuJO-inscrit, ${prof}`;
   });
+
+  if (REMOTE) { startRemote(); return; }
+
+  // ── iPad = écran de la borne, le téléphone du visiteur = manette (serveur temps réel) ──
+  function startRemote() {
+    const ca = root.querySelector('.ca');
+    ca.classList.remove('logged');               // pas de manette tactile sur l'iPad
+    root.querySelectorAll('.ca-bar a[href*="logout"]').forEach((a) => a.remove());
+    show('ca-r-off');
+    let current = null;
+    let readyTimer = null;
+    let winnerTimer = null;
+    const script = document.createElement('script');
+    script.src = `${REMOTE.server}/socket.io/socket.io.js`;
+    script.onerror = () => { $('ca-r-err').textContent = 'Serveur de la borne injoignable. Vérifiez le Wi-Fi, ou ouvrez la page avec ?local pour jouer sur la tablette.'; };
+    script.onload = () => {
+      let room = '';
+      try { room = localStorage.getItem('orthoRemoteRoom') || ''; } catch {}
+      const socket = io(REMOTE.server, { auth: { role: 'screen', key: REMOTE.key, room } });
+      const backToAttract = () => { if (current) return; Game.stop(); show('ca-r-attract'); };
+
+      socket.on('connect_error', () => show('ca-r-off'));
+      socket.on('fatal', (msg) => { $('ca-r-err').textContent = msg; show('ca-r-off'); });
+      socket.on('room', ({ code, qr }) => {
+        try { localStorage.setItem('orthoRemoteRoom', code); } catch {}
+        $('ca-r-qr').src = qr;
+        if (!current && Game.mode === 'attract') show('ca-r-attract');
+      });
+      socket.on('queue', ({ queue, current: cur, prizesLeft }) => {
+        const next = queue.length ? `PROCHAIN : ${esc(queue[0]).toUpperCase()}${queue.length > 1 ? ` +${queue.length - 1}` : ''}` : 'PERSONNE EN ATTENTE';
+        $('ca-r-queue').innerHTML = `${cur ? `EN JEU : ${esc(cur).toUpperCase()}<br>` : ''}${next}<br>${prizesLeft} REPLAYS À GAGNER`;
+      });
+      socket.on('game:ready', ({ gameId, name }) => {
+        current = { gameId, name };
+        Game.stop();
+        $('ca-r-name').textContent = name.toUpperCase();
+        show('ca-r-ready');
+        let left = 30;
+        clearInterval(readyTimer);
+        $('ca-r-count').textContent = `${left} S`;
+        readyTimer = setInterval(() => { left -= 1; $('ca-r-count').textContent = `${Math.max(0, left)} S`; }, 1000);
+        try { Sfx.coin(); } catch {}
+      });
+      socket.on('game:start', ({ gameId, name }) => {
+        if (!current || current.gameId !== gameId) return;
+        clearInterval(readyTimer);
+        show(null);
+        Game.start({
+          name,
+          onFeedback: (data) => socket.emit('feedback', data),
+          onEnd: (result) => {
+            socket.emit('game:over', { gameId, ...result });
+            current = null;
+            setTimeout(backToAttract, 5000);
+          },
+        });
+      });
+      socket.on('game:cancel', () => { current = null; clearInterval(readyTimer); backToAttract(); });
+      socket.on('input', (state) => Game.setRemote(state));
+      socket.on('winner', ({ name, reward, speaker }) => {
+        $('ca-r-wname').textContent = name.toUpperCase();
+        $('ca-r-wwhat').textContent = `remporte « ${reward.replace(/^Replay —\s*/, '')} » · ${speaker}`;
+        show('ca-r-winner');
+        try { Sfx.win(); } catch {}
+        clearTimeout(winnerTimer);
+        winnerTimer = setTimeout(() => { if (!current) show('ca-r-attract'); }, 7000);
+      });
+    };
+    document.body.appendChild(script);
+    // Le son se débloque au premier toucher de l'équipe sur l'iPad
+    root.addEventListener('pointerdown', () => { try { Sfx.unlock(); } catch {} }, { once: true });
+  }
 
   if (!logged) {
     const hash = location.hash.replace('#', '');

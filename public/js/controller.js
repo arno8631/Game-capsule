@@ -136,6 +136,11 @@
       }
     });
     socket.on('game:result', showResult);
+    socket.on('queue:denied', () => {
+      resetLobby();
+      $('joinBox').innerHTML = '<p class="center" style="font-family:var(--pixel);font-size:12px;line-height:1.8;color:var(--capsule-accent)">VOUS AVEZ DÉJÀ JOUÉ VOTRE PARTIE</p><p class="muted center">Une partie par participant. Merci et à bientôt sur Capsule !</p>';
+      vibrate(200);
+    });
   }
 
   function resetLobby() {

@@ -91,11 +91,17 @@ Les lots sont configurés dans `src/config.js` :
 - Un seul lot par compte (verrou local + tag Shopify), code à usage unique lié au client.
 - `/screen?debug` expose `Game.debug.win()` et `Game.debug.boss()` pour la recette ; le seuil de durée reste appliqué.
 
+## Mode téléphone-manette sur l'iPad du stand
+
+L'iPad affiche la borne du site ; le visiteur scanne le QR code, se connecte ou s'inscrit sur son téléphone,
+qui devient la manette. Relais temps réel + codes automatiques par le serveur Node de ce dépôt.
+**Guide pas à pas : [docs/DEPLOIEMENT.md](docs/DEPLOIEMENT.md)** (Render via `render.yaml`).
+
 ## Version site capsule-med.com (sans serveur) — recommandée
 
 La page `capsule-med.com/pages/ortho-invaders` (modèle `inscription-test`) **est la borne d'arcade** :
 plein écran dès l'ouverture, « INSERT COIN », puis inscription ou connexion Capsule **dans l'écran de la borne**
-(formulaires natifs Shopify), et le jeu démarre. Fichier du jeu : Contenu › Fichiers › `ortho-invaders-borne-v9.js`.
+(formulaires natifs Shopify), et le jeu démarre. Fichier du jeu : Contenu › Fichiers › `ortho-invaders-borne-v10.js`.
 
 | Étape | Ce qui se passe |
 |---|---|

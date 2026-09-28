@@ -17,7 +17,8 @@ const webRouter = require('./src/web');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+// La borne peut tourner sur la page capsule-med.com (iPad) : autoriser ces origines pour le temps réel.
+const io = new Server(server, { cors: { origin: config.storeOrigins, credentials: false } });
 
 const secureCookies = config.publicUrl.startsWith('https://');
 if (secureCookies) app.set('trust proxy', 1);
@@ -196,8 +197,14 @@ io.on('connection', (socket) => {
     socket.emit('game:result', { won: true, score: null, eligible: true, reason: null, previous: null });
   }
 
+  const isTester = () => config.testerIds.includes(String(customer.id).replace('gid://shopify/Customer/', ''));
+
   socket.on('queue:join', () => {
     if (room.current?.customer.id === customer.id) return;
+    if (config.onePlayPerCustomer && !isTester() && store.hasPlayed(customer.id)) {
+      socket.emit('queue:denied', { reason: 'played' });
+      return;
+    }
     const existing = room.queue.find((p) => p.customer.id === customer.id);
     if (existing) existing.socketId = socket.id;
     else room.queue.push({ customer, socketId: socket.id });
@@ -213,6 +220,7 @@ io.on('connection', (socket) => {
   socket.on('game:start', () => {
     if (!isCurrent() || room.current.startedAt) return;
     room.current.startedAt = Date.now();
+    if (!isTester()) store.markPlayed(customer.id);
     clearTimeout(room.current.timer);
     room.screen?.emit('game:start', { gameId: room.current.gameId, name: customer.name });
   });

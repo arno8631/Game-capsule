@@ -4,7 +4,8 @@ const env = (name, fallback = '') => (process.env[name] ?? fallback).trim();
 
 const config = {
   port: Number(env('PORT', '3000')),
-  publicUrl: env('PUBLIC_URL').replace(/\/$/, ''),
+  // Render fournit automatiquement RENDER_EXTERNAL_URL (https://….onrender.com)
+  publicUrl: (env('PUBLIC_URL') || env('RENDER_EXTERNAL_URL')).replace(/\/$/, ''),
   sessionSecret: env('SESSION_SECRET', 'capsule-arcade-dev-secret'),
   screenKey: env('SCREEN_KEY'),
   authMode: env('AUTH_MODE', 'demo'),
@@ -32,6 +33,9 @@ const config = {
   // Tags posés sur chaque praticien qui se connecte pour jouer (retrouvables dans Shopify > Clients)
   playerTags: env('PLAYER_TAGS', 'jeuJO,jeuJO-2026').split(',').map((t) => t.trim()).filter(Boolean),
   // Domaines de la boutique autorisés à intégrer le jeu (page capsule-med.com/pages/ortho-invaders)
+  // Une seule partie par participant (sauf comptes de test : identifiants clients Shopify)
+  onePlayPerCustomer: env('ONE_PLAY_PER_CUSTOMER', 'true') !== 'false',
+  testerIds: env('TESTER_IDS', '23773949821273').split(',').map((t) => t.trim()).filter(Boolean),
   storeOrigins: env('STORE_ORIGINS', 'https://capsule-med.com,https://www.capsule-med.com').split(',').map((t) => t.trim()).filter(Boolean),
 };
 
