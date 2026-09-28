@@ -115,4 +115,21 @@ async function grantReward(customer, reward) {
   return { code, url: redeemUrl(code, reward), discountId: data.discountCodeBasicCreate.codeDiscountNode.id };
 }
 
-module.exports = { hasWinnerTag, grantReward };
+const CUSTOMER_PROFILE = `query CustomerProfile($id: ID!) {
+  customer(id: $id) { id firstName lastName email tags }
+}`;
+
+// Ajoute des tags au client (jeuJO, jeuJO-2026, profession…). Sans API Admin : ignoré.
+async function tagCustomer(customerId, tags) {
+  if (!config.adminEnabled || !tags.length || !String(customerId).startsWith('gid://')) return false;
+  const data = await adminGraphql(TAG_WINNER, { id: customerId, tags });
+  if (data.tagsAdd.userErrors.length) throw new Error(data.tagsAdd.userErrors.map((e) => e.message).join(' · '));
+  return true;
+}
+
+async function getCustomer(customerId) {
+  const data = await adminGraphql(CUSTOMER_PROFILE, { id: customerId });
+  return data.customer;
+}
+
+module.exports = { hasWinnerTag, grantReward, tagCustomer, getCustomer };

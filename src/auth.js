@@ -5,6 +5,7 @@
 const crypto = require('crypto');
 const express = require('express');
 const config = require('./config');
+const rewards = require('./rewards');
 
 const router = express.Router();
 router.use(express.json());
@@ -18,8 +19,10 @@ function displayName(c) {
   return (c.email || 'Joueur').split('@')[0];
 }
 
-function login(req, customer) {
+// Connexion réussie : session + tags « jeuJO » dans Shopify (inscription traçable).
+function login(req, customer, extraTags = []) {
   req.session.customer = { ...customer, name: displayName(customer) };
+  rewards.tagPlayer(req.session.customer, extraTags);
 }
 
 // Ne renvoie que vers /play (évite les redirections ouvertes).
@@ -139,12 +142,8 @@ async function storefront(query, variables) {
   return res.json();
 }
 
-router.post('/auth/storefront', async (req, res) => {
-  if (config.authMode !== 'storefront') return res.status(404).end();
-  const { email, password } = req.body || {};
-  if (!email || !password) return res.status(400).json({ error: 'Email et mot de passe requis.' });
-  try {
-    const created = await storefront(
+async function storefrontSignIn(email, password) {
+  const created = await storefront(
       `mutation Login($input: CustomerAccessTokenCreateInput!) {
         customerAccessTokenCreate(input: $input) {
           customerAccessToken { accessToken }
@@ -153,19 +152,60 @@ router.post('/auth/storefront', async (req, res) => {
       }`,
       { input: { email, password } },
     );
-    const token = created.data?.customerAccessTokenCreate?.customerAccessToken?.accessToken;
-    if (!token) return res.status(401).json({ error: 'Identifiants Capsule incorrects.' });
+  const token = created.data?.customerAccessTokenCreate?.customerAccessToken?.accessToken;
+  if (!token) return null;
+  const me = await storefront(
+    'query Me($t: String!) { customer(customerAccessToken: $t) { id email firstName lastName } }',
+    { t: token },
+  );
+  return me.data?.customer || null;
+}
 
-    const me = await storefront(
-      'query Me($t: String!) { customer(customerAccessToken: $t) { id email firstName lastName } }',
-      { t: token },
-    );
-    const c = me.data?.customer;
-    if (!c) return res.status(401).json({ error: 'Compte introuvable.' });
+router.post('/auth/storefront', async (req, res) => {
+  if (config.authMode !== 'storefront') return res.status(404).end();
+  const { email, password } = req.body || {};
+  if (!email || !password) return res.status(400).json({ error: 'Email et mot de passe requis.' });
+  try {
+    const c = await storefrontSignIn(email, password);
+    if (!c) return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
     login(req, { ...c, source: 'storefront' });
     res.json({ customer: req.session.customer });
   } catch (err) {
     console.error('[auth] storefront', err);
+    res.status(502).json({ error: 'Shopify ne répond pas, réessayez.' });
+  }
+});
+
+// Création de compte Capsule depuis la manette (comptes classiques) : le praticien est inscrit
+// sur capsule-med.com, puis tagué jeuJO + profession.
+router.post('/auth/storefront-register', async (req, res) => {
+  if (config.authMode !== 'storefront') return res.status(404).end();
+  const b = req.body || {};
+  const firstName = String(b.firstName || '').trim().slice(0, 40);
+  const lastName = String(b.lastName || '').trim().slice(0, 40);
+  const email = String(b.email || '').trim().toLowerCase();
+  const password = String(b.password || '');
+  const professionTag = config.professions[b.profession];
+  if (!firstName || !lastName || !/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: 'Prénom, nom et email valides requis.' });
+  if (password.length < 6) return res.status(400).json({ error: 'Mot de passe : 6 caractères minimum.' });
+  if (!professionTag) return res.status(400).json({ error: 'Indiquez votre profession.' });
+  try {
+    const created = await storefront(
+      `mutation Register($input: CustomerCreateInput!) {
+        customerCreate(input: $input) { customer { id } customerUserErrors { code field message } }
+      }`,
+      { input: { firstName, lastName, email, password, acceptsMarketing: Boolean(b.acceptsMarketing) } },
+    );
+    const errors = created.data?.customerCreate?.customerUserErrors || [];
+    if (errors.some((e) => e.code === 'TAKEN')) return res.status(409).json({ error: 'Un compte Capsule existe déjà avec cet email : connectez-vous.' });
+    if (errors.length || created.errors) return res.status(400).json({ error: errors[0]?.message || 'Inscription impossible, réessayez.' });
+
+    const c = await storefrontSignIn(email, password);
+    if (!c) return res.status(502).json({ error: 'Compte créé : connectez-vous avec votre email et mot de passe.' });
+    login(req, { ...c, source: 'storefront' }, [professionTag, 'jeuJO-inscrit']);
+    res.json({ customer: req.session.customer, created: true });
+  } catch (err) {
+    console.error('[auth] storefront-register', err);
     res.status(502).json({ error: 'Shopify ne répond pas, réessayez.' });
   }
 });

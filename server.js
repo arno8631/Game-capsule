@@ -11,8 +11,9 @@ const { Server } = require('socket.io');
 
 const config = require('./src/config');
 const store = require('./src/store');
-const shopify = require('./src/shopify');
+const rewards = require('./src/rewards');
 const authRouter = require('./src/auth');
+const webRouter = require('./src/web');
 
 const app = express();
 const server = http.createServer(app);
@@ -32,9 +33,10 @@ app.use(sessionMiddleware);
 io.engine.use(sessionMiddleware);
 
 app.use(authRouter);
+app.use(webRouter);
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 // Polices rétro servies en local : la borne fonctionne même sans Internet fiable sur le salon.
-app.use('/fonts', express.static(path.join(__dirname, 'node_modules', '@fontsource'), { maxAge: '7d' }));
+app.use('/fonts', (req, res, next) => { res.set('Access-Control-Allow-Origin', '*'); next(); }, express.static(path.join(__dirname, 'node_modules', '@fontsource'), { maxAge: '7d' }));
 
 app.get('/api/config', (req, res) => {
   res.json({
@@ -50,8 +52,6 @@ app.use((err, req, res, _next) => {
 
 // ── Salles de jeu (une par écran) ───────────────────────────
 const rooms = new Map();
-const claims = new Map(); // customerId → { gameId, expiresAt } : droit de choisir un lot
-const claiming = new Set();
 
 const START_TIMEOUT_MS = 30_000;
 const RECONNECT_GRACE_MS = 20_000;
@@ -80,9 +80,7 @@ function baseUrl(socket) {
   return `http://${host.replace(/^(localhost|127\.0\.0\.1)/, lanAddress())}`;
 }
 
-function prizesLeft() {
-  return Math.max(0, config.maxPrizes - store.prizesGiven());
-}
+const prizesLeft = rewards.prizesLeft;
 
 function queueView(room) {
   return room.queue.map((p) => p.customer.name);
@@ -154,38 +152,11 @@ io.on('connection', (socket) => {
 
     socket.on('game:over', async ({ gameId, won, score, wave } = {}) => {
       const cur = room.current;
-      if (!cur || cur.gameId !== gameId || !cur.startedAt) return;
+      if (!cur || cur.gameId !== gameId || !cur.startedAt || cur.ended) return;
+      cur.ended = true;
       const seconds = (Date.now() - cur.startedAt) / 1000;
-      const legitWin = Boolean(won) && seconds >= config.minWinSeconds;
-      const safeScore = Math.max(0, Math.min(Number(score) || 0, 999_999));
-      const { customer, socketId } = cur;
-
-      store.addScore({
-        customerId: customer.id, name: customer.name, email: customer.email,
-        score: safeScore, wave: Number(wave) || 0, won: legitWin,
-        seconds: Math.round(seconds), at: new Date().toISOString(),
-      });
-
-      const result = { won: legitWin, score: safeScore, eligible: false, reason: null, previous: null };
-      if (legitWin) {
-        const previous = store.getWinner(customer.id);
-        if (previous) {
-          result.reason = 'already';
-          result.previous = previous;
-        } else if (!prizesLeft()) {
-          result.reason = 'soldout';
-        } else {
-          try {
-            if (await shopify.hasWinnerTag(customer.id)) result.reason = 'already';
-            else result.eligible = true;
-          } catch (err) {
-            console.error('[shopify] vérification du tag', err);
-            result.eligible = true; // le verrou local + le code à usage unique suffisent
-          }
-        }
-        if (result.eligible) claims.set(customer.id, { gameId, expiresAt: Date.now() + 15 * 60_000 });
-      }
-      io.to(socketId).emit('game:result', result);
+      const result = await rewards.recordGame(cur.customer, { won, score, wave, seconds, source: 'borne' });
+      io.to(cur.socketId).emit('game:result', result);
       endTurn(room, NEXT_PLAYER_DELAY_MS);
     });
 
@@ -221,7 +192,7 @@ io.on('connection', (socket) => {
     socket.emit(room.current.startedAt ? 'game:resume' : 'turn', { gameId: room.current.gameId });
   }
   // Victoire obtenue mais lot pas encore choisi (téléphone rechargé) : on repropose le choix.
-  if (claims.get(customer.id)?.expiresAt > Date.now()) {
+  if (rewards.hasPendingClaim(customer.id)) {
     socket.emit('game:result', { won: true, score: null, eligible: true, reason: null, previous: null });
   }
 
@@ -253,27 +224,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('reward:claim', async ({ rewardId } = {}, ack = () => {}) => {
-    const claim = claims.get(customer.id);
-    const reward = config.rewards.find((r) => r.id === rewardId);
-    if (!claim || claim.expiresAt < Date.now()) return ack({ error: 'Délai dépassé : contactez l’équipe Capsule sur le stand.' });
-    if (!reward) return ack({ error: 'Lot inconnu.' });
-    if (claiming.has(customer.id)) return ack({ error: 'Attribution déjà en cours…' });
-
-    claiming.add(customer.id);
-    try {
-      const granted = await shopify.grantReward(customer, reward);
-      const record = { ...granted, rewardId: reward.id, rewardTitle: reward.title, at: new Date().toISOString() };
-      store.saveWinner(customer.id, record);
-      claims.delete(customer.id);
-      room.screen?.emit('winner', { name: customer.name, reward: reward.title, speaker: reward.speaker });
+    const res = await rewards.claim(customer, rewardId);
+    if (res.ok) {
+      room.screen?.emit('winner', { name: customer.name, reward: res.rewardTitle, speaker: res.speaker });
       broadcastRoom(room);
-      ack({ ok: true, ...record });
-    } catch (err) {
-      console.error('[shopify] attribution du lot', err);
-      ack({ error: 'Impossible de créer votre code. Passez au stand Capsule, votre victoire est enregistrée.' });
-    } finally {
-      claiming.delete(customer.id);
     }
+    ack(res);
   });
 
   socket.on('disconnect', () => {

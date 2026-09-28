@@ -29,6 +29,19 @@ const config = {
   rewardValidityDays: Number(env('REWARD_VALIDITY_DAYS', '60')),
   winnerTag: env('WINNER_TAG', 'arcade-ortho-2026-gagnant'),
   minWinSeconds: Number(env('MIN_WIN_SECONDS', '45')),
+  // Tags posés sur chaque praticien qui se connecte pour jouer (retrouvables dans Shopify > Clients)
+  playerTags: env('PLAYER_TAGS', 'jeuJO,jeuJO-2026').split(',').map((t) => t.trim()).filter(Boolean),
+  // Domaines de la boutique autorisés à intégrer le jeu (page capsule-med.com/pages/ortho-invaders)
+  storeOrigins: env('STORE_ORIGINS', 'https://capsule-med.com,https://www.capsule-med.com').split(',').map((t) => t.trim()).filter(Boolean),
+};
+
+// Professions proposées à l'inscription → tag client (cohérent avec les segments existants)
+config.professions = {
+  orthodontiste: 'Orthodontiste',
+  omnipraticien: 'Omnipraticien',
+  assistant: 'Assistante',
+  etudiant: 'Etudiant',
+  autre: 'Autre-profession',
 };
 
 // Lots : les deux replays orthodontie de la boutique Capsule.

@@ -32,7 +32,8 @@
       fetch('/api/config').then((r) => r.json()),
     ]);
     rewards = cfg.rewards;
-    $('lobbyRewards').innerHTML = rewards.map(rewardCard).join('');
+    $('lobbyRewards').innerHTML = rewards.map((r) => rewardCard(r)).join('');
+    $('loginRewards').innerHTML = rewards.map((r) => rewardCard(r)).join('');
     if (!me.customer) return showLogin(me.authMode);
     connect(me.customer);
   }
@@ -59,6 +60,28 @@
     if (!res.ok) return ($('loginError').textContent = json.error || 'Connexion impossible.');
     connect(json.customer);
   }
+
+  function tab(register) {
+    $('tabRegister').classList.toggle('on', register);
+    $('tabLogin').classList.toggle('on', !register);
+    $('regForm').hidden = !register;
+    $('sfForm').hidden = register;
+    $('loginError').textContent = '';
+  }
+  $('tabRegister').addEventListener('click', () => tab(true));
+  $('tabLogin').addEventListener('click', () => tab(false));
+
+  $('regForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.submitter;
+    if (btn) btn.disabled = true;
+    await postLogin('/auth/storefront-register', {
+      firstName: $('rFirst').value, lastName: $('rLast').value, profession: $('rProf').value,
+      email: $('rEmail').value, password: $('rPass').value, acceptsMarketing: $('rNews').checked,
+    });
+    if (btn) btn.disabled = false;
+    if (/existe déjà/.test($('loginError').textContent)) { tab(false); $('sfEmail').value = $('rEmail').value; $('loginError').textContent = 'Vous avez déjà un compte Capsule : connectez-vous.'; }
+  });
 
   $('sfForm').addEventListener('submit', (e) => {
     e.preventDefault();

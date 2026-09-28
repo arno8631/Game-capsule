@@ -24,13 +24,14 @@
     .muted { color: var(--ink-dim); font-size: 18px; }
     .center { text-align: center; }
     label { display: block; font-family: var(--pixel); font-size: 10px; margin: 12px 0 6px; color: var(--ink-dim); }
-    input[type=email], input[type=text], input[type=password] {
+    input[type=email], input[type=text], input[type=password], select {
       width: 100%; font: inherit; font-size: 22px; padding: 10px 12px; color: var(--ink);
       background: var(--bg); border: 2px solid var(--violet); outline: none;
     }
     input:focus { border-color: var(--capsule-secondary); }
     .error { color: var(--capsule-primary); font-size: 20px; min-height: 1em; }
     .consent { display: flex; gap: 10px; align-items: flex-start; font-size: 17px; color: var(--ink-dim); line-height: 1.1; }
+    label.consent { font-family: var(--body); font-size: 17px; text-transform: none; letter-spacing: 0; color: var(--ink-dim); margin: 14px 0 0; }
     .consent input { width: 22px; height: 22px; flex: none; accent-color: var(--capsule-primary); }
 
     .toggle { display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--violet); }
@@ -97,8 +98,13 @@
   <section class="view" id="v-login">
     <div class="logo"><span class="brand">CAPSULE</span><span class="title">ORTHO<br>INVADERS</span></div>
     <div class="panel">
-      <h2>Connexion requise</h2>
-      <p class="muted" style="margin-top:8px">Connectez-vous avec votre compte Capsule pour jouer et remporter un replay de formation.</p>
+      <h2>★ À gagner</h2>
+      <p class="muted" style="margin:8px 0 10px">Battez la Méga-Carie et choisissez votre replay de formation offert (valeur 249 €).</p>
+      <div class="rewards" id="loginRewards"></div>
+    </div>
+    <div class="panel">
+      <h2 id="loginTitle">Compte Capsule requis</h2>
+      <p class="muted" style="margin-top:8px">Le jeu est réservé aux praticiens inscrits sur Capsule. Connectez-vous ou créez votre compte en 30 secondes.</p>
 
       <div data-mode="customer-account" hidden>
         <p style="height:14px"></p>
@@ -106,14 +112,45 @@
         <p class="muted center" style="margin-top:10px">Pas encore de compte ? Il se crée en 30 secondes avec votre email.</p>
       </div>
 
-      <form data-mode="storefront" id="sfForm" hidden>
-        <label for="sfEmail">EMAIL</label>
-        <input id="sfEmail" type="email" autocomplete="email" required>
-        <label for="sfPass">MOT DE PASSE</label>
-        <input id="sfPass" type="password" autocomplete="current-password" required>
-        <p style="height:14px"></p>
-        <button class="btn" type="submit">Se connecter</button>
-      </form>
+      <div data-mode="storefront" hidden>
+        <div class="toggle" style="margin-top:14px">
+          <button type="button" id="tabRegister" class="on">JE CRÉE MON COMPTE</button>
+          <button type="button" id="tabLogin">J'AI UN COMPTE</button>
+        </div>
+
+        <form id="regForm">
+          <label for="rFirst">PRÉNOM</label>
+          <input id="rFirst" type="text" autocomplete="given-name" maxlength="40" required>
+          <label for="rLast">NOM</label>
+          <input id="rLast" type="text" autocomplete="family-name" maxlength="40" required>
+          <label for="rProf">PROFESSION</label>
+          <select id="rProf" required>
+            <option value="">Choisir…</option>
+            <option value="orthodontiste">Orthodontiste</option>
+            <option value="omnipraticien">Chirurgien-dentiste omnipraticien</option>
+            <option value="assistant">Assistant(e) dentaire</option>
+            <option value="etudiant">Étudiant(e) / interne</option>
+            <option value="autre">Autre</option>
+          </select>
+          <label for="rEmail">EMAIL PROFESSIONNEL</label>
+          <input id="rEmail" type="email" autocomplete="email" required>
+          <label for="rPass">MOT DE PASSE (6 CARACTÈRES MIN.)</label>
+          <input id="rPass" type="password" autocomplete="new-password" minlength="6" required>
+          <label class="consent" style="margin-top:14px"><input type="checkbox" id="rNews" checked>Je souhaite recevoir les nouveautés Capsule (formations, replays, cas cliniques).</label>
+          <p style="height:14px"></p>
+          <button class="btn" type="submit">Créer mon compte et jouer</button>
+        </form>
+
+        <form id="sfForm" hidden>
+          <label for="sfEmail">EMAIL</label>
+          <input id="sfEmail" type="email" autocomplete="email" required>
+          <label for="sfPass">MOT DE PASSE</label>
+          <input id="sfPass" type="password" autocomplete="current-password" required>
+          <p style="height:14px"></p>
+          <button class="btn" type="submit">Se connecter</button>
+          <p class="muted center" style="margin-top:10px;font-size:16px"><a href="https://capsule-med.com/account/login#recover" style="color:inherit">Mot de passe oublié ?</a></p>
+        </form>
+      </div>
 
       <form data-mode="demo" id="demoForm" hidden>
         <label for="dName">PRÉNOM</label>

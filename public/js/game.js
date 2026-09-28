@@ -170,7 +170,9 @@
   const keys = {};
   addEventListener('keydown', (e) => {
     keys[e.code] = true;
-    if (['ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+    // Ne bloque le défilement de la page que pendant une partie (jeu intégré au site)
+    const playing = g && mode !== 'attract' && mode !== 'over' && !paused;
+    if (playing && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space'].includes(e.code)) e.preventDefault();
   });
   addEventListener('keyup', (e) => { keys[e.code] = false; });
 

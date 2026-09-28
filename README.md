@@ -56,8 +56,8 @@ npm start
 
 | Mode | Quand l'utiliser | Configuration |
 |---|---|---|
-| `customer-account` ✅ | Boutique avec les **nouveaux comptes clients** (connexion par code email) | Admin Shopify → canal **Headless** → *Customer Account API* : client **confidentiel**, URI de rappel `https://<PUBLIC_URL>/auth/callback`, origine JavaScript `https://<PUBLIC_URL>`. Renseigner `CUSTOMER_ACCOUNT_CLIENT_ID` et `CUSTOMER_ACCOUNT_CLIENT_SECRET` |
-| `storefront` | Boutique encore en **comptes classiques** (email + mot de passe) | Canal Headless → jeton public Storefront API dans `STOREFRONT_ACCESS_TOKEN` |
+| `customer-account` | Boutique avec les **nouveaux comptes clients** (connexion par code email) | Admin Shopify → canal **Headless** → *Customer Account API* : client **confidentiel**, URI de rappel `https://<PUBLIC_URL>/auth/callback`, origine JavaScript `https://<PUBLIC_URL>`. Renseigner `CUSTOMER_ACCOUNT_CLIENT_ID` et `CUSTOMER_ACCOUNT_CLIENT_SECRET` |
+| `storefront` ✅ | **Cas de Capsule** : la boutique utilise les **comptes classiques** (email + mot de passe) ; création de compte possible depuis le téléphone | Canal Headless → jeton public Storefront API dans `STOREFRONT_ACCESS_TOKEN` |
 | `demo` | Tests et répétition | Rien |
 
 ### 2. Attribution des lots (API Admin)
@@ -90,6 +90,34 @@ Les lots sont configurés dans `src/config.js` :
 - Une victoire obtenue en moins de `MIN_WIN_SECONDS` secondes est refusée.
 - Un seul lot par compte (verrou local + tag Shopify), code à usage unique lié au client.
 - `/screen?debug` expose `Game.debug.win()` et `Game.debug.boss()` pour la recette ; le seuil de durée reste appliqué.
+
+## Recrutement de praticiens : page du site + tags `jeuJO`
+
+Le jeu sert aussi à **inscrire un maximum de praticiens sur capsule-med.com**. Pour jouer, il faut un
+compte Capsule, sur la borne comme sur le site.
+
+| Où | Ce qui se passe | Tags posés sur la fiche client |
+|---|---|---|
+| **Page du site** `capsule-med.com/pages/ortho-invaders` (créée **en brouillon**) | Lots à gagner, règles, formulaire « Créer mon compte praticien » (profession demandée) ou « Me connecter ». Une fois connecté, le jeu s'affiche dans la page. | `jeuJO`, `jeuJO-2026`, `jeuJO-inscrit`, profession |
+| **Borne** (téléphone, `AUTH_MODE=storefront`) | Onglets « Je crée mon compte » / « J'ai un compte » : le compte est créé sur Capsule depuis le téléphone. | `jeuJO`, `jeuJO-2026`, `jeuJO-inscrit` si nouveau, profession |
+| Client existant qui joue (borne ou site) | Tagué à la connexion (API Admin). | `jeuJO`, `jeuJO-2026` (+ `jeuJO-site` s'il joue sur le site) |
+| Gagnant | Code 100 % + tags lot | `arcade-ortho-2026-gagnant`, `arcade-lot-<replay>` |
+
+Segments Shopify créés (Clients › Segments) :
+- **Jeu JO 2026 — Ortho Invaders (joueurs)** : `customer_tags CONTAINS 'jeuJO-2026'`
+- **Jeu JO 2026 — nouveaux inscrits via le jeu** : `customer_tags CONTAINS 'jeuJO-inscrit'`
+
+> Le tag `jeuJO` existe déjà sur 632 clients (édition 2025). `jeuJO-2026` isole les joueurs de cette année.
+
+**Mettre la page en ligne**
+1. Déployer ce serveur (HTTPS) et remplacer `ARCADE_URL` à la fin du HTML de la page (Boutique en ligne › Pages › Ortho Invaders › `<>`).
+2. Compléter la page **Reglements-jeux-JO-2025** (elle est vide), ou pointer le lien vers un nouveau règlement 2026.
+3. Publier la page et l'ajouter au menu ou à une bannière d'accueil. Le QR code imprimé du stand peut viser cette page.
+4. Ne pas rouvrir la page dans l'éditeur visuel de Shopify (le script serait retiré) : l'éditer en mode HTML `<>`. La source est versionnée dans `shopify/page-ortho-invaders.html`.
+
+Le jeu du site appelle `embed.js` et `/api/web/*` sur ce serveur (CORS limité à `STORE_ORIGINS`). Le client
+est identifié par la session Shopify de la page ; le code gagné est réservé à son compte, donc inutilisable
+par quelqu'un d'autre.
 
 ## Déployer pour l'événement
 
