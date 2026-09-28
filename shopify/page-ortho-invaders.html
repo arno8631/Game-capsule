@@ -1,165 +1,24 @@
-<!-- Page Shopify : capsule-med.com/pages/ortho-invaders
-     Contenu HTML de la page (Boutique en ligne > Pages), modèle de thème « inscription-test » (section page-content). À la fin : ARCADE_URL = adresse du serveur du jeu. -->
+<!-- Page Shopify : capsule-med.com/pages/ortho-invaders — modèle de thème « inscription-test ».
+     La page EST la borne d'arcade : le fichier du jeu (Contenu › Fichiers) prend tout l'écran,
+     avec l'inscription / connexion Capsule dans l'écran de la borne. __GAME_URL__ = URL du fichier. -->
 <style>
-/* Pleine largeur : sortir de la colonne de 680 px du thème et masquer son titre en doublon */
-body:has(#cj){overflow-x:hidden}
-.page-content:has(#cj){margin-top:0!important;margin-bottom:0!important;padding-left:0!important;padding-right:0!important}
-.page-content:has(#cj) > h1{display:none}
-.page-content:has(#cj) > div:has(#cj){max-width:none!important;margin-top:0!important}
-#cj{width:100vw;margin-left:calc(50% - 50vw);border-radius:0!important;min-height:100vh}
-#cj{--c:#2de2e6;--m:#ff2a6d;--y:#ffd319;--v:#9d4edd;--bg:#12062e;--bg2:#1f0b4a;--ink:#f5f3ff;--dim:#c9bdf0;
-  background:radial-gradient(ellipse at 50% 0%,#3b0f6b 0%,#12062e 55%,#05010f 100%);color:var(--ink);
-  font-family:inherit;border-radius:18px;padding:clamp(20px,4vw,48px) 16px;overflow:hidden;display:grid;gap:clamp(28px,5vw,56px)}
-#cj *{box-sizing:border-box}
-#cj a{color:inherit}
-#cj .cj-wrap{width:min(1080px,100%);margin:0 auto;display:grid;gap:22px}
-#cj .cj-hero{text-align:center;justify-items:center}
-#cj .cj-badge{display:inline-block;font:700 12px/1 monospace;letter-spacing:.5em;padding:10px 10px 10px 16px;color:var(--c);border:2px solid var(--c);box-shadow:0 0 12px var(--c)}
-#cj h2.cj-title{margin:0;font:900 clamp(34px,7vw,76px)/1 'Courier New',monospace;letter-spacing:.02em;text-transform:uppercase;
-  background:linear-gradient(180deg,#fff 0 45%,#bff7ff 52%,var(--c) 64%,#3a86ff);-webkit-background-clip:text;background-clip:text;color:transparent;
-  filter:drop-shadow(4px 4px 0 var(--m)) drop-shadow(0 0 16px rgba(255,42,109,.6))}
-#cj .cj-lead{margin:0;max-width:62ch;font-size:clamp(17px,2vw,20px);line-height:1.5;color:var(--dim)}
-#cj .cj-lead b{color:var(--y)}
-#cj h3{margin:0;text-align:center;font:800 clamp(18px,2.4vw,24px)/1.3 'Courier New',monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--y);text-shadow:2px 2px 0 var(--m)}
-#cj .cj-prizes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
-#cj .cj-prize{display:grid;grid-template-rows:auto 1fr;background:var(--bg);border:3px solid var(--m);box-shadow:0 0 24px rgba(255,42,109,.35);text-decoration:none}
-#cj .cj-prize img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;background:var(--bg2)}
-#cj .cj-prize div{padding:16px;display:grid;gap:6px;align-content:start}
-#cj .cj-who{font:700 13px/1.3 monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--y)}
-#cj .cj-what{font-size:18px;line-height:1.3}
-#cj .cj-val{font:700 14px/1 monospace;color:var(--c)}
-#cj .cj-val s{color:#8f82b8;margin-right:6px}
-#cj .cj-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;counter-reset:s}
-#cj .cj-step{background:rgba(31,11,74,.8);border:2px solid var(--v);padding:16px;line-height:1.4;font-size:16px}
-#cj .cj-step b{display:block;font:800 22px/1 monospace;color:var(--y);margin-bottom:6px}
-#cj .cj-gate{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:18px}
-#cj .cj-box{background:var(--bg);border:3px solid var(--v);padding:20px;display:grid;gap:12px;align-content:start}
-#cj .cj-box.main{border-color:var(--y);box-shadow:0 0 30px rgba(255,211,25,.25)}
-#cj .cj-box h4{margin:0;font:800 16px/1.3 monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--c)}
-#cj .cj-box p{margin:0;color:var(--dim);font-size:15px;line-height:1.4}
-#cj label{display:grid;gap:4px;font:700 12px/1.2 monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
-#cj input,#cj select{width:100%;font:inherit;font-size:16px;padding:11px 12px;color:var(--ink);background:#0b0322;border:2px solid var(--v);border-radius:0}
-#cj input:focus,#cj select:focus{outline:none;border-color:var(--c)}
-#cj .cj-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-#cj .cj-check{display:flex;gap:10px;align-items:flex-start;text-transform:none;letter-spacing:0;font:400 14px/1.35 inherit;color:var(--dim)}
-#cj .cj-check input{width:20px;height:20px;flex:none;accent-color:var(--m)}
-#cj .cj-btn{font:800 16px/1 monospace;text-transform:uppercase;letter-spacing:.06em;border:0;cursor:pointer;padding:16px;background:var(--y);color:var(--bg);box-shadow:0 5px 0 #b8860b;text-align:center;text-decoration:none;display:block;width:100%}
-#cj .cj-btn.alt{background:var(--c);box-shadow:0 5px 0 #178a8d}
-#cj .cj-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #b8860b}
-#cj .cj-small{font-size:13px;color:#8f82b8;text-align:center}
-#cj .cj-game[hidden],#cj .cj-gate[hidden]{display:none}
-#cj .cj-legal{font-size:13px;line-height:1.5;color:#8f82b8;text-align:center;max-width:80ch;margin:0 auto}
-@media (max-width:480px){#cj .cj-row{grid-template-columns:1fr}}
+.page-content:has(#capsule-arcade) > h1{display:none}
+#capsule-arcade{min-height:70vh;display:grid;place-items:center;text-align:center;background:#05010f;color:#f5f3ff;border-radius:12px;padding:24px}
+#capsule-arcade a{color:#ffd319}
 </style>
-
-<div id="cj">
-  <section class="cj-wrap cj-hero">
-    <span class="cj-badge">CAPSULE · JOURNÉES ORTHODONTIE</span>
-    <h2 class="cj-title">Ortho Invaders</h2>
-    <p class="cj-lead">Bactéries, plaque et sucres attaquent l'arcade dentaire ! Protégez les dents, battez la <b>Méga-Carie</b> et repartez avec un <b>replay de formation orthodontique offert</b>. Jeu gratuit, réservé aux praticiens inscrits sur Capsule.</p>
-  </section>
-
-  <section class="cj-wrap">
-    <h3>★ À gagner ★</h3>
-    <div class="cj-prizes">
-      <a class="cj-prize" href="/products/replay-biomecanique-maitriser-les-cles-de-lexcellence-en-orthodontie">
-        <img src="https://cdn.shopify.com/s/files/1/0919/4356/7705/files/Dr_skander_Ellouze.png?v=1768831208" alt="Dr Skander Ellouze" loading="lazy">
-        <div>
-          <span class="cj-who">Dr Skander Ellouze</span>
-          <span class="cj-what">Replay · Biomécanique : maîtriser les clés de l'excellence en orthodontie</span>
-          <span class="cj-val"><s>249 €</s> OFFERT</span>
-        </div>
-      </a>
-      <a class="cj-prize" href="/products/replay-adieu-les-urgences-maitriser-le-collage-des-contentions">
-        <img src="https://cdn.shopify.com/s/files/1/0919/4356/7705/files/Dr_Isabel_QUERALTO_1_e60be294-b6e2-488a-8220-56834f88d9df.png?v=1768831220" alt="Replay collage des contentions" loading="lazy">
-        <div>
-          <span class="cj-who">Dr Philippides</span>
-          <span class="cj-what">Replay · Adieu les urgences : maîtriser le collage des contentions</span>
-          <span class="cj-val"><s>249 €</s> OFFERT</span>
-        </div>
-      </a>
-    </div>
-    <p class="cj-small">1 replay au choix par praticien vainqueur · dans la limite des lots disponibles</p>
-  </section>
-
-  <section class="cj-wrap">
-    <h3>Comment jouer</h3>
-    <div class="cj-steps">
-      <div class="cj-step"><b>1</b>Créez votre compte praticien Capsule (30 secondes) ou connectez-vous.</div>
-      <div class="cj-step"><b>2</b>Défendez les dents pendant 3 vagues, puis affrontez la Méga-Carie.</div>
-      <div class="cj-step"><b>3</b>Victoire : choisissez votre replay, l'équipe Capsule vous envoie votre code personnel.</div>
-    </div>
-  </section>
-
-  <section class="cj-wrap" id="jouer">
-    <div class="cj-gate" id="cj-gate">
-      <form class="cj-box main" method="post" action="/account" accept-charset="UTF-8" id="cj-register">
-        <input type="hidden" name="form_type" value="create_customer">
-        <input type="hidden" name="utf8" value="✓">
-        <input type="hidden" name="customer[tags]" id="cj-tags" value="jeuJO, jeuJO-2026, jeuJO-inscrit">
-        <input type="hidden" name="return_to" value="/pages/ortho-invaders#jouer">
-        <h4>▶ Nouveau sur Capsule ? Inscrivez-vous pour jouer</h4>
-        <div class="cj-row">
-          <label>Prénom<input name="customer[first_name]" autocomplete="given-name" required></label>
-          <label>Nom<input name="customer[last_name]" autocomplete="family-name" required></label>
-        </div>
-        <label>Profession
-          <select id="cj-prof" required>
-            <option value="">Choisir…</option>
-            <option value="Orthodontiste">Orthodontiste</option>
-            <option value="Omnipraticien">Chirurgien-dentiste omnipraticien</option>
-            <option value="Assistante">Assistant(e) dentaire</option>
-            <option value="Etudiant">Étudiant(e) / interne</option>
-            <option value="Autre-profession">Autre</option>
-          </select>
-        </label>
-        <label>Email professionnel<input type="email" name="customer[email]" autocomplete="email" required></label>
-        <label>Mot de passe<input type="password" name="customer[password]" autocomplete="new-password" minlength="6" required></label>
-        <label class="cj-check"><input type="checkbox" name="customer[accepts_marketing]" value="true" checked>Je souhaite recevoir les nouveautés Capsule : formations, replays, cas cliniques.</label>
-        <button class="cj-btn" type="submit">Créer mon compte et jouer</button>
-      </form>
-
-      <form class="cj-box" method="post" action="/account/login" accept-charset="UTF-8">
-        <input type="hidden" name="form_type" value="customer_login">
-        <input type="hidden" name="utf8" value="✓">
-        <input type="hidden" name="return_url" value="/pages/ortho-invaders#jouer">
-        <h4>Déjà inscrit ? Connectez-vous</h4>
-        <p>Utilisez votre compte Capsule habituel.</p>
-        <label>Email<input type="email" name="customer[email]" autocomplete="email" required></label>
-        <label>Mot de passe<input type="password" name="customer[password]" autocomplete="current-password" required></label>
-        <button class="cj-btn alt" type="submit">Me connecter</button>
-        <a class="cj-small" href="/account/login#recover">Mot de passe oublié ?</a>
-      </form>
-    </div>
-
-    <div class="cj-game" id="cj-game" hidden>
-      <div id="capsule-arcade"><p class="cj-lead" style="text-align:center;margin:0 auto">Vous êtes connecté ✓ Le jeu se charge…</p></div>
-    </div>
-  </section>
-
-  <p class="cj-legal">Jeu gratuit sans obligation d'achat, organisé par Capsule à l'occasion des Journées Orthodontie. Un lot par compte : code personnel à usage unique, lié à votre compte Capsule. Voir le <a href="/pages/reglement-ortho-invaders-2026">règlement du jeu</a>. Vos données sont utilisées pour la gestion du jeu et, si vous l'acceptez, l'envoi d'informations Capsule.</p>
+<div id="capsule-arcade" data-rules="/pages/reglements-jeux-jo-2025">
+  <div>
+    <p><strong>ORTHO INVADERS</strong> · la borne d'arcade Capsule des Journées de l'Orthodontie.</p>
+    <p>Chargement de la borne… Défendez l'arcade dentaire, battez la Méga-Carie et gagnez un replay de formation (Dr Skander Ellouze ou Dr Philippides).</p>
+    <p><a href="/account/register">Créer mon compte</a> · <a href="/account/login">Me connecter</a></p>
+  </div>
 </div>
-
 <script>
 (function () {
-  // Fichier du jeu hébergé dans Shopify (Contenu › Fichiers) — aucun serveur externe
-  var GAME_URL = '__GAME_URL__';
   var cid = (window.ShopifyAnalytics && ShopifyAnalytics.meta && ShopifyAnalytics.meta.page && ShopifyAnalytics.meta.page.customerId) || (window.__st && __st.cid);
-  var gate = document.getElementById('cj-gate');
-  var game = document.getElementById('cj-game');
-  if (cid) {
-    gate.hidden = true;
-    game.hidden = false;
-    document.getElementById('capsule-arcade').setAttribute('data-customer-id', cid);
-    var s = document.createElement('script');
-    s.src = GAME_URL;
-    document.body.appendChild(s);
-  }
-  // La profession devient un tag client (segmentation Shopify)
-  document.getElementById('cj-register').addEventListener('submit', function () {
-    var prof = document.getElementById('cj-prof').value;
-    var tags = document.getElementById('cj-tags');
-    if (prof) tags.value = 'jeuJO, jeuJO-2026, jeuJO-inscrit, ' + prof;
-  });
+  if (cid) document.getElementById('capsule-arcade').setAttribute('data-customer-id', cid);
+  var s = document.createElement('script');
+  s.src = '__GAME_URL__';
+  document.body.appendChild(s);
 })();
 </script>
