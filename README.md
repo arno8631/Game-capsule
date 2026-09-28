@@ -113,7 +113,8 @@ Segments Shopify créés (Clients › Segments) :
 1. Déployer ce serveur (HTTPS) et remplacer `ARCADE_URL` à la fin du HTML de la page (Boutique en ligne › Pages › Ortho Invaders › `<>`).
 2. Compléter la page **Reglements-jeux-JO-2025** (elle est vide), ou pointer le lien vers un nouveau règlement 2026.
 3. Publier la page et l'ajouter au menu ou à une bannière d'accueil. Le QR code imprimé du stand peut viser cette page.
-4. Ne pas rouvrir la page dans l'éditeur visuel de Shopify (le script serait retiré) : l'éditer en mode HTML `<>`. La source est versionnée dans `shopify/page-ortho-invaders.html`.
+4. **Modèle de page : `inscription-test`** (il n'affiche que le contenu de la page). Le modèle par défaut `page` du thème affiche « Notre centre de formation » à la place du contenu : ne pas le remettre.
+5. Ne pas rouvrir la page dans l'éditeur visuel de Shopify (le script serait retiré) : l'éditer en mode HTML `<>`. La source est versionnée dans `shopify/page-ortho-invaders.html`.
 
 Le jeu du site appelle `embed.js` et `/api/web/*` sur ce serveur (CORS limité à `STORE_ORIGINS`). Le client
 est identifié par la session Shopify de la page ; le code gagné est réservé à son compte, donc inutilisable
