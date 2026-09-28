@@ -1563,6 +1563,12 @@ window.__orthoInvadersGame = function () {
     { id: 'contentions', speaker: 'Dr Philippides', title: 'Replay Adieu les urgences : maîtriser le collage des contentions' },
   ];
   const WON_KEY = `orthoInvadersWon:${customerId}`;
+  const PLAYED_KEY = `orthoInvadersPlayed:${customerId}`; // une seule partie par participant
+  const LOGOUT_URL = `/account/logout?return_url=${encodeURIComponent(PAGE + (STAND ? '?borne' : ''))}`;
+  // Remise à zéro par l'équipe (ex. partie interrompue) : ouvrir la page avec ?reset
+  if (new URLSearchParams(location.search).has('reset')) {
+    try { Object.keys(localStorage).filter((k) => k.startsWith('orthoInvaders')).forEach((k) => localStorage.removeItem(k)); } catch {}
+  }
   const store = {
     get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
     set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
@@ -1613,6 +1619,7 @@ window.__orthoInvadersGame = function () {
   @keyframes ca-blink{to{visibility:hidden}}
   .ca-p{font-size:4.6cqw;line-height:1.1;color:var(--dim);margin:0}
   .ca-p b{color:var(--y);font-weight:normal}
+  .ca-count{font-family:'Press Start 2P',monospace;font-size:2.8cqw;color:var(--c);line-height:1.6}
   .ca-h{font-family:'Press Start 2P',monospace;font-size:3.4cqw;color:var(--c);margin:1cqw 0 0;line-height:1.5}
   #capsule-arcade .ca-btn{font-family:'Press Start 2P',monospace;font-size:3.3cqw;line-height:1.3;text-transform:uppercase;border:0;cursor:pointer;
     padding:3.4cqw;background:var(--y);color:#12062e;box-shadow:0 5px 0 #b8860b;text-decoration:none;display:block;width:100%;text-align:center}
@@ -1727,7 +1734,7 @@ window.__orthoInvadersGame = function () {
         <!-- Connecté : prêt à jouer -->
         <div class="ca-ov" id="ca-start" hidden><div class="ca-card">
           <p class="ca-t big">PRÊT,<br>DOCTEUR ?</p>
-          <p class="ca-p">3 vagues, puis la <b>Méga-Carie</b>. Battez-la et choisissez votre replay offert :</p>
+          <p class="ca-p">3 vagues, puis la <b>Méga-Carie</b>. Battez-la et choisissez votre replay offert. <b>Une seule partie par participant</b> : concentrez-vous !</p>
           <div class="ca-prizes">${prizeCards}</div>
           <button type="button" class="ca-btn" id="ca-play">▶ Jouer</button>
         </div></div>
@@ -1744,13 +1751,22 @@ window.__orthoInvadersGame = function () {
             <label>VOTRE EMAIL DE COMPTE CAPSULE<input type="email" name="contact[email]" id="ca-email" autocomplete="email" required></label>
             <button class="ca-btn" type="submit" id="ca-send" disabled>Valider mon gain</button>
           </form>
-          <button type="button" class="ca-btn alt" id="ca-again">↻ Rejouer</button>
+          <p class="ca-p ca-count" id="ca-end-count"></p>
+          <a class="ca-btn alt" id="ca-next" href="#">▶ Joueur suivant</a>
         </div></div>
 
         <div class="ca-ov" id="ca-sent" hidden><div class="ca-card">
           <p class="ca-t big">★ BRAVO ★</p>
           <p class="ca-p">Votre victoire est enregistrée. L'équipe Capsule crée votre code personnel (100 %, usage unique, lié à votre compte) et vous l'envoie par email. Sur le stand : présentez cet écran.</p>
-          <button type="button" class="ca-btn alt" id="ca-again2">↻ Rejouer pour le score</button>
+          <p class="ca-p ca-count" id="ca-sent-count"></p>
+          <a class="ca-btn alt ca-next" href="#">▶ Joueur suivant</a>
+        </div></div>
+
+        <div class="ca-ov" id="ca-done" hidden><div class="ca-card">
+          <p class="ca-t big">PARTIE<br>JOUÉE</p>
+          <p class="ca-p">Vous avez déjà joué votre partie : <b>une partie par participant</b>. Merci et à bientôt sur Capsule !</p>
+          <p class="ca-p ca-count" id="ca-done-count"></p>
+          <a class="ca-btn alt ca-next" href="#">▶ Joueur suivant</a>
         </div></div>
 
         <div class="ca-ov" id="ca-pause" hidden><div class="ca-card">
@@ -1811,7 +1827,7 @@ window.__orthoInvadersGame = function () {
     root.addEventListener('pointerdown', auto, { capture: true });
   }
 
-  const overlays = ['ca-coin', 'ca-register', 'ca-login', 'ca-start', 'ca-end', 'ca-sent', 'ca-pause'];
+  const overlays = ['ca-coin', 'ca-register', 'ca-login', 'ca-start', 'ca-end', 'ca-sent', 'ca-done', 'ca-pause'];
   const show = (id) => overlays.forEach((o) => { $(o).hidden = o !== id; });
   syncFs();
 
@@ -1837,9 +1853,34 @@ window.__orthoInvadersGame = function () {
   let last = null;
   let reward = null;
 
-  show(new URLSearchParams(location.search).get('contact_posted') === 'true' && store.get(WON_KEY) ? 'ca-sent' : 'ca-start');
+  // ── Une partie par participant, puis déconnexion pour le joueur suivant ──
+  root.querySelectorAll('#ca-next, .ca-next').forEach((a) => { a.href = LOGOUT_URL; });
+  let countdown = null;
+  function logoutIn(seconds, elId, label) {
+    clearInterval(countdown);
+    let left = seconds;
+    const tick = () => {
+      $(elId).textContent = `${label} dans ${left} s`;
+      if (left-- <= 0) { clearInterval(countdown); location.href = LOGOUT_URL; }
+    };
+    tick();
+    countdown = setInterval(tick, 1000);
+  }
+
+  const posted = new URLSearchParams(location.search).get('contact_posted') === 'true';
+  if (posted && store.get(WON_KEY)) {
+    show('ca-sent');
+    logoutIn(20, 'ca-sent-count', 'Déconnexion automatique');
+  } else if (store.get(PLAYED_KEY)) {
+    show('ca-done');
+    logoutIn(10, 'ca-done-count', 'Déconnexion automatique');
+  } else {
+    show('ca-start');
+  }
 
   function play() {
+    if (store.get(PLAYED_KEY)) { show('ca-done'); logoutIn(10, 'ca-done-count', 'Déconnexion automatique'); return; }
+    store.set(PLAYED_KEY, String(Date.now()));
     Sfx.unlock();
     show(null);
     document.activeElement?.blur?.();
@@ -1853,13 +1894,10 @@ window.__orthoInvadersGame = function () {
     show('ca-end');
     $('ca-end-t').textContent = won ? '★ VICTOIRE ★' : 'GAME OVER';
     $('ca-win').hidden = true;
-    $('ca-again').hidden = false;
+    $('ca-next').hidden = false;
     if (!won) {
-      $('ca-end-p').textContent = `${score} points. La Méga-Carie a gagné cette manche… retentez votre chance !`;
-      return;
-    }
-    if (store.get(WON_KEY)) {
-      $('ca-end-p').textContent = `Encore gagné, ${score} points ! Un seul replay par compte : votre gain est déjà enregistré.`;
+      $('ca-end-p').textContent = `${score} points. La Méga-Carie a gagné cette fois… Merci d'avoir joué ! Suivez-nous sur capsule-med.com pour les prochaines formations.`;
+      logoutIn(12, 'ca-end-count', 'Joueur suivant');
       return;
     }
     $('ca-end-p').textContent = `Bravo ! ${score} points. Choisissez votre replay offert :`;
@@ -1872,7 +1910,9 @@ window.__orthoInvadersGame = function () {
     reward = null;
     $('ca-send').disabled = true;
     $('ca-win').hidden = false;
-    $('ca-again').hidden = true;
+    $('ca-next').hidden = true;
+    // Le gagnant a 2 minutes pour valider, puis la borne se libère.
+    logoutIn(120, 'ca-end-count', 'Déconnexion automatique');
   }
 
   $('ca-win').addEventListener('submit', (e) => {
@@ -1892,11 +1932,10 @@ window.__orthoInvadersGame = function () {
       'Admissibilité = ce client uniquement, Limite = 1 utilisation. Puis envoyer le code au gagnant.',
     ].join('\n');
     store.set(WON_KEY, reward.id);
+    clearInterval(countdown);
   });
 
   $('ca-play').addEventListener('click', play);
-  $('ca-again').addEventListener('click', play);
-  $('ca-again2').addEventListener('click', play);
 
   function pause() {
     if (!window.Game || ['attract', 'over'].includes(Game.mode) || Game.paused) return;
