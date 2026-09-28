@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#12062e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Manette · Ortho Invaders</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/fonts/press-start-2p/index.css">
+  <link rel="stylesheet" href="/fonts/vt323/index.css">
+  <link rel="stylesheet" href="/fonts/pacifico/index.css">
+  <link rel="stylesheet" href="/css/arcade.css">
+  <style>
+    html, body { height: 100%; overscroll-behavior: none; }
+    body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+    .view { display: none; min-height: 100%; padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom)); }
+    .view.on { display: flex; flex-direction: column; gap: 18px; justify-content: center; max-width: 480px; margin: 0 auto; }
+    .logo { font-size: 30px; }
+    h1, h2 { font-family: var(--pixel); font-weight: normal; margin: 0; line-height: 1.5; }
+    h1 { font-size: 16px; color: var(--capsule-accent); text-align: center; }
+    h2 { font-size: 12px; color: var(--capsule-secondary); }
+    p { margin: 0; line-height: 1.15; }
+    .muted { color: var(--ink-dim); font-size: 18px; }
+    .center { text-align: center; }
+    label { display: block; font-family: var(--pixel); font-size: 10px; margin: 12px 0 6px; color: var(--ink-dim); }
+    input[type=email], input[type=text], input[type=password] {
+      width: 100%; font: inherit; font-size: 22px; padding: 10px 12px; color: var(--ink);
+      background: var(--bg); border: 2px solid var(--violet); outline: none;
+    }
+    input:focus { border-color: var(--capsule-secondary); }
+    .error { color: var(--capsule-primary); font-size: 20px; min-height: 1em; }
+    .consent { display: flex; gap: 10px; align-items: flex-start; font-size: 17px; color: var(--ink-dim); line-height: 1.1; }
+    .consent input { width: 22px; height: 22px; flex: none; accent-color: var(--capsule-primary); }
+
+    .toggle { display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--violet); }
+    .toggle button { font-family: var(--pixel); font-size: 10px; padding: 12px 6px; background: transparent; color: var(--ink-dim); border: 0; }
+    .toggle button.on { background: var(--violet); color: #fff; }
+
+    .pos { font-family: var(--pixel); font-size: 44px; color: var(--capsule-accent); text-align: center; text-shadow: 3px 3px 0 var(--capsule-primary); }
+
+    .rewards { display: grid; gap: 12px; }
+    .reward { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: center; text-align: left; padding: 10px; background: var(--bg); border: 3px solid var(--capsule-primary); color: var(--ink); font: inherit; width: 100%; }
+    .reward img { width: 96px; aspect-ratio: 1; object-fit: cover; background: var(--bg-2); }
+    .reward .who { font-family: var(--pixel); font-size: 9px; color: var(--capsule-accent); line-height: 1.5; }
+    .reward .what { font-size: 20px; line-height: 1.05; }
+    button.reward:active { border-color: var(--capsule-secondary); }
+
+    .code { font-family: var(--pixel); font-size: 20px; text-align: center; padding: 18px 8px; border: 3px dashed var(--capsule-accent); color: var(--capsule-accent); word-break: break-all; }
+
+    #startBtn { font-size: 28px; padding: 34px; animation: pulse 1s ease-in-out infinite; }
+    @keyframes pulse { 50% { box-shadow: 0 6px 0 #b8860b, 0 0 50px var(--capsule-accent); } }
+
+    /* ── Manette ── */
+    #v-pad.on { max-width: none; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); gap: 0; justify-content: stretch; height: 100dvh; }
+    .pad { flex: 1; display: grid; grid-template-rows: auto 1fr; grid-template-columns: 1fr 1fr; touch-action: none; }
+    .hud { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; font-family: var(--pixel); font-size: 11px; background: rgba(10, 3, 30, .7); border-bottom: 2px solid var(--capsule-primary); }
+    .hud .lives { color: var(--capsule-primary); letter-spacing: 2px; }
+    .hud .score { color: var(--capsule-secondary); }
+    .dirs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px; align-items: end; }
+    .dir, .fire {
+      touch-action: none; border: 0; font-family: var(--pixel); color: #fff;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .dir { height: min(46vh, 220px); font-size: 36px; background: var(--bg-2); border: 4px solid var(--capsule-secondary); box-shadow: 0 6px 0 #178a8d; }
+    .dir.down { transform: translateY(4px); box-shadow: 0 2px 0 #178a8d; background: #2a1566; }
+    .tiltbox { display: none; grid-column: 1 / -1; align-self: center; text-align: center; font-family: var(--pixel); font-size: 10px; color: var(--ink-dim); }
+    .tiltbar { position: relative; height: 18px; border: 3px solid var(--capsule-secondary); margin: 12px 0; }
+    .tiltbar i { position: absolute; top: 0; bottom: 0; width: 18%; left: 41%; background: var(--capsule-secondary); transition: left .05s; }
+    .pad.tilt .dir { display: none; }
+    .pad.tilt .tiltbox { display: block; }
+    .firezone { display: grid; place-items: center; padding: 14px; }
+    .fire {
+      width: min(44vw, 46vh, 230px); aspect-ratio: 1; border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #ff7ba3, var(--capsule-primary) 55%, #8f0f3a);
+      box-shadow: 0 8px 0 #6d0a2c, 0 0 30px var(--capsule-primary); font-size: 18px;
+    }
+    .fire.down { transform: translateY(6px); box-shadow: 0 2px 0 #6d0a2c, 0 0 50px var(--capsule-primary); }
+    .rotate { display: none; }
+    /* Portrait : flèches sous le pouce gauche, TIR sous le pouce droit */
+    @media (orientation: portrait) {
+      .pad { grid-template-rows: auto 1fr auto; }
+      .rotate { display: grid; place-items: center; grid-column: 1 / -1; font-family: var(--pixel); font-size: 10px; color: var(--ink-dim); text-align: center; padding: 16px; line-height: 1.8; }
+      .dirs { gap: 8px; padding: 10px 6px 18px 10px; }
+      .dir { height: 34vh; font-size: 28px; }
+      .firezone { padding: 10px 10px 18px 6px; align-items: end; }
+      .fire { width: 100%; max-width: 190px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="synthwave" aria-hidden="true"></div>
+
+  <section class="view on" id="v-loading"><h1 class="blink">CHARGEMENT…</h1></section>
+
+  <!-- Connexion compte Capsule -->
+  <section class="view" id="v-login">
+    <div class="logo"><span class="brand">CAPSULE</span><span class="title">ORTHO<br>INVADERS</span></div>
+    <div class="panel">
+      <h2>Connexion requise</h2>
+      <p class="muted" style="margin-top:8px">Connectez-vous avec votre compte Capsule pour jouer et remporter un replay de formation.</p>
+
+      <div data-mode="customer-account" hidden>
+        <p style="height:14px"></p>
+        <a class="btn" id="oauthBtn" href="/auth/login">Se connecter avec Capsule</a>
+        <p class="muted center" style="margin-top:10px">Pas encore de compte ? Il se crée en 30 secondes avec votre email.</p>
+      </div>
+
+      <form data-mode="storefront" id="sfForm" hidden>
+        <label for="sfEmail">EMAIL</label>
+        <input id="sfEmail" type="email" autocomplete="email" required>
+        <label for="sfPass">MOT DE PASSE</label>
+        <input id="sfPass" type="password" autocomplete="current-password" required>
+        <p style="height:14px"></p>
+        <button class="btn" type="submit">Se connecter</button>
+      </form>
+
+      <form data-mode="demo" id="demoForm" hidden>
+        <label for="dName">PRÉNOM</label>
+        <input id="dName" type="text" autocomplete="given-name" maxlength="20" required>
+        <label for="dEmail">EMAIL</label>
+        <input id="dEmail" type="email" autocomplete="email" required>
+        <p style="height:14px"></p>
+        <button class="btn" type="submit">Jouer (mode démo)</button>
+      </form>
+      <p class="error" id="loginError"></p>
+    </div>
+    <p class="muted center" style="font-size:15px">Votre prénom et votre score s'affichent sur l'écran de la borne. Données traitées par Capsule pour l'animation et l'attribution du lot, conformément à notre politique de confidentialité.</p>
+  </section>
+
+  <!-- Salle d'attente -->
+  <section class="view" id="v-lobby">
+    <h1 id="hello">BONJOUR !</h1>
+    <div class="panel">
+      <h2>Commandes</h2>
+      <div class="toggle" style="margin-top:10px">
+        <button id="modeButtons" class="on">◀ ▶ BOUTONS</button>
+        <button id="modeTilt">📱 INCLINAISON</button>
+      </div>
+      <p class="muted" style="margin-top:10px" id="modeHelp">Deux flèches pour bouger, le gros bouton rose pour tirer.</p>
+    </div>
+    <div id="joinBox">
+      <button class="btn" id="joinBtn">▶ Rejoindre la partie</button>
+    </div>
+    <div id="waitBox" hidden>
+      <p class="center muted">Votre place dans la file</p>
+      <div class="pos" id="pos">1</div>
+      <p class="center muted">Gardez cette page ouverte, votre téléphone vibrera quand ce sera à vous.</p>
+      <p style="height:10px"></p>
+      <button class="btn ghost" id="leaveBtn">Quitter la file</button>
+    </div>
+    <div class="panel">
+      <h2>À gagner</h2>
+      <div class="rewards" id="lobbyRewards" style="margin-top:10px"></div>
+    </div>
+    <button class="btn ghost" id="logoutBtn">Changer de compte</button>
+  </section>
+
+  <!-- À vous de jouer -->
+  <section class="view" id="v-turn">
+    <h1>C'EST À VOUS !</h1>
+    <p class="center muted">Regardez le grand écran puis appuyez sur START.</p>
+    <button class="btn" id="startBtn">START</button>
+    <p class="center muted" id="turnCount"></p>
+  </section>
+
+  <!-- Manette -->
+  <section class="view" id="v-pad">
+    <div class="pad" id="pad">
+      <div class="hud"><span class="score" id="hScore">000000</span><span id="hWave">VAGUE 1</span><span class="lives" id="hLives">♥♥♥</span></div>
+      <div class="rotate">↻ Tournez le téléphone<br>pour plus de confort</div>
+      <div class="dirs">
+        <button class="dir" data-dir="-1" aria-label="Gauche">◀</button>
+        <button class="dir" data-dir="1" aria-label="Droite">▶</button>
+        <div class="tiltbox">INCLINEZ LE TÉLÉPHONE<div class="tiltbar"><i id="tiltDot"></i></div><button class="btn ghost" id="recal">Recalibrer</button></div>
+      </div>
+      <div class="firezone"><button class="fire" id="fire" aria-label="Tirer">TIR</button></div>
+    </div>
+  </section>
+
+  <!-- Résultat -->
+  <section class="view" id="v-result">
+    <h1 id="rTitle">GAME OVER</h1>
+    <p class="center" id="rScore" style="font-family:var(--pixel);font-size:14px;color:var(--capsule-secondary)"></p>
+    <p class="center muted" id="rText"></p>
+    <div class="rewards" id="rRewards"></div>
+    <div id="rCode" hidden>
+      <div class="code" id="codeValue"></div>
+      <p style="height:12px"></p>
+      <a class="btn" id="codeLink" href="#" target="_blank" rel="noopener">Récupérer ma formation</a>
+      <p style="height:10px"></p>
+      <button class="btn alt" id="copyBtn">Copier le code</button>
+      <p class="muted center" style="margin-top:12px;font-size:17px">Code à usage unique, réservé à votre compte Capsule. Faites une capture d'écran !</p>
+    </div>
+    <p class="error center" id="rError"></p>
+    <button class="btn alt" id="againBtn">↻ Rejouer</button>
+  </section>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/controller.js"></script>
+</body>
+</html>

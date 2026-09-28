@@ -1,0 +1,25 @@
+{
+  "name": "capsule-ortho-invaders",
+  "version": "1.0.0",
+  "description": "Borne d'arcade rétro Capsule pour les journées portes ouvertes orthodontie : grand écran + téléphone manette, connexion compte Capsule (Shopify), replays de formation à gagner.",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check src/config.js && node --check public/js/screen.js && node --check src/auth.js && node --check src/shopify.js && node --check src/store.js && node --check public/js/game.js && node --check public/js/controller.js && node --check public/js/sprites.js && node --check public/js/audio.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@fontsource/pacifico": "^5.3.0",
+    "@fontsource/press-start-2p": "^5.3.0",
+    "@fontsource/vt323": "^5.3.0",
+    "dotenv": "^18.0.4",
+    "express": "^4.22.3",
+    "express-session": "^1.19.0",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.4"
+  }
+}

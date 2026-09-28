@@ -1,0 +1,130 @@
+/* CAPSULE · ARCADE — charte rétro néon
+   Les couleurs « capsule-* » sont les jetons de marque : ajustez-les à la charte officielle. */
+:root {
+  --capsule-primary: #ff2a6d;   /* magenta néon  */
+  --capsule-secondary: #2de2e6; /* cyan néon     */
+  --capsule-accent: #ffd319;    /* jaune soleil  */
+  --orange: #ff901f;
+  --violet: #9d4edd;
+  --bg: #12062e;
+  --bg-2: #1f0b4a;
+  --ink: #f5f3ff;
+  --ink-dim: #b9a8e8;
+  --pixel: 'Press Start 2P', ui-monospace, 'Courier New', monospace;
+  --body: 'VT323', ui-monospace, 'Courier New', monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 22px;
+  -webkit-font-smoothing: none;
+}
+
+.pixel { font-family: var(--pixel); letter-spacing: .02em; line-height: 1.5; }
+
+.logo {
+  font-family: var(--pixel);
+  text-transform: uppercase;
+  line-height: 1.1;
+  text-align: center;
+}
+.logo .brand {
+  display: inline-block;
+  font-size: .45em;
+  letter-spacing: .5em;
+  padding: .5em .8em .5em 1.3em;
+  border: 3px solid var(--capsule-secondary);
+  color: var(--capsule-secondary);
+  box-shadow: 0 0 12px var(--capsule-secondary), inset 0 0 12px color-mix(in srgb, var(--capsule-secondary) 40%, transparent);
+  margin-bottom: .6em;
+}
+.logo .title {
+  display: block;
+  background: linear-gradient(180deg, #fff 0%, #fff 45%, var(--capsule-secondary) 55%, #2a7bff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(4px 4px 0 var(--capsule-primary)) drop-shadow(0 0 14px color-mix(in srgb, var(--capsule-primary) 70%, transparent));
+}
+.logo .script {
+  display: block;
+  font-family: 'Pacifico', cursive;
+  text-transform: none;
+  color: #ff7bd5;
+  font-size: .55em;
+  margin-top: .1em;
+  text-shadow: 0 0 6px #f706cf, 0 0 18px #f706cf;
+}
+
+.btn {
+  font-family: var(--pixel);
+  font-size: 16px;
+  text-transform: uppercase;
+  color: var(--bg);
+  background: var(--capsule-accent);
+  border: 0;
+  padding: 18px 22px;
+  width: 100%;
+  cursor: pointer;
+  box-shadow: 0 6px 0 #b8860b, 0 0 20px color-mix(in srgb, var(--capsule-accent) 50%, transparent);
+  transition: transform .06s, box-shadow .06s;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #b8860b; }
+.btn.alt { background: var(--capsule-secondary); box-shadow: 0 6px 0 #178a8d; }
+.btn.ghost { background: transparent; color: var(--ink-dim); box-shadow: none; border: 2px solid var(--ink-dim); font-size: 12px; padding: 12px; }
+.btn:disabled { opacity: .5; }
+
+.panel {
+  background: color-mix(in srgb, var(--bg-2) 85%, transparent);
+  border: 3px solid var(--violet);
+  box-shadow: 0 0 0 3px var(--bg), 0 0 24px color-mix(in srgb, var(--violet) 60%, transparent);
+  padding: 18px;
+}
+
+.blink { animation: blink 1s steps(2, start) infinite; }
+@keyframes blink { to { visibility: hidden; } }
+
+/* Fond synthwave (soleil + grille) */
+.synthwave {
+  position: fixed; inset: 0; z-index: 0; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 120%, #3b0f6b 0%, var(--bg) 60%);
+}
+.synthwave::before {
+  content: ''; position: absolute; left: 50%; top: 14%;
+  width: min(70vw, 70vh); aspect-ratio: 1; transform: translateX(-50%);
+  border-radius: 50%;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 62%, var(--bg) 62% 66%, transparent 66% 70%) ,
+    linear-gradient(180deg, var(--capsule-accent), var(--orange) 50%, var(--capsule-primary));
+  -webkit-mask: linear-gradient(180deg, #000 0 55%, transparent 55%, #000 58%, transparent 58%, #000 63%, transparent 63%, #000 69%, transparent 69%, #000 76%, transparent 76%);
+  mask: linear-gradient(180deg, #000 0 55%, transparent 55%, #000 58%, transparent 58%, #000 63%, transparent 63%, #000 69%, transparent 69%, #000 76%, transparent 76%);
+  opacity: .9;
+}
+.synthwave::after {
+  content: ''; position: absolute; left: -50%; right: -50%; bottom: 0; height: 45%;
+  background:
+    linear-gradient(transparent 0 96%, color-mix(in srgb, #f706cf 70%, transparent) 96%) 0 0 / 100% 40px,
+    linear-gradient(90deg, transparent 0 97%, color-mix(in srgb, #f706cf 70%, transparent) 97%) 0 0 / 60px 100%;
+  transform: perspective(300px) rotateX(60deg);
+  transform-origin: bottom;
+  animation: grid 1.2s linear infinite;
+  -webkit-mask: linear-gradient(transparent, #000 40%);
+  mask: linear-gradient(transparent, #000 40%);
+}
+.synthwave ~ * { position: relative; z-index: 1; }
+@keyframes grid { to { background-position: 0 40px, 0 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .synthwave::after, .blink { animation: none; }
+}
