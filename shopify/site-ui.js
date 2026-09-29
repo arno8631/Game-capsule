@@ -42,7 +42,7 @@
   const WON_KEY = `orthoInvadersWon:${customerId}`;
   const PLAYED_KEY = `orthoInvadersPlayed:${customerId}`; // une seule partie par participant
   // Comptes de test Capsule (identifiants clients Shopify) : parties illimitées, pas de déconnexion auto
-  const TESTERS = ['23773949821273', '23276575129945', '23130642612569'];
+  const TESTERS = ['23773949821273', '23276575129945', '23130642612569', '23662288142681', '23394139406681'];
   const TESTER = logged && TESTERS.includes(String(customerId));
   const LOGOUT_URL = `/account/logout?return_url=${encodeURIComponent(PAGE + (STAND ? '?borne' : ''))}`;
   // Remise à zéro par l'équipe (ex. partie interrompue) : ouvrir la page avec ?reset
