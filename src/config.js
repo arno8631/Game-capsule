@@ -35,7 +35,7 @@ const config = {
   // Domaines de la boutique autorisés à intégrer le jeu (page capsule-med.com/pages/ortho-invaders)
   // Une seule partie par participant (sauf comptes de test : identifiants clients Shopify)
   onePlayPerCustomer: env('ONE_PLAY_PER_CUSTOMER', 'true') !== 'false',
-  testerIds: env('TESTER_IDS', '23773949821273').split(',').map((t) => t.trim()).filter(Boolean),
+  testerIds: env('TESTER_IDS', '23773949821273,23276575129945').split(',').map((t) => t.trim()).filter(Boolean),
   storeOrigins: env('STORE_ORIGINS', 'https://capsule-med.com,https://www.capsule-med.com').split(',').map((t) => t.trim()).filter(Boolean),
 };
 

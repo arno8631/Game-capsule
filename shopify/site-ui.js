@@ -42,7 +42,7 @@
   const WON_KEY = `orthoInvadersWon:${customerId}`;
   const PLAYED_KEY = `orthoInvadersPlayed:${customerId}`; // une seule partie par participant
   // Comptes de test Capsule (identifiants clients Shopify) : parties illimitées, pas de déconnexion auto
-  const TESTERS = ['23773949821273'];
+  const TESTERS = ['23773949821273', '23276575129945'];
   const TESTER = logged && TESTERS.includes(String(customerId));
   const LOGOUT_URL = `/account/logout?return_url=${encodeURIComponent(PAGE + (STAND ? '?borne' : ''))}`;
   // Remise à zéro par l'équipe (ex. partie interrompue) : ouvrir la page avec ?reset
@@ -461,7 +461,8 @@
   // ── Tag Shopify de chaque praticien connecté à la borne (nouvel inscrit ou compte existant) ──
   // Fonction Edge Supabase capsule « ortho-jeu-tag » : ajoute jeuJO, jeuJO-2026 et
   // jeuJO-inscrit / jeuJO-compte-existant. Une fois par session d'onglet et par compte.
-  if (logged) {
+  // Comptes de test capsule exclus : ils ne faussent pas les statistiques jeuJO.
+  if (logged && !TESTER) {
     const TAGGED_KEY = `orthoTagged:${customerId}`;
     let done = false;
     try { done = sessionStorage.getItem(TAGGED_KEY) === '1'; } catch {}
