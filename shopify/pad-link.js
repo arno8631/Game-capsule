@@ -28,7 +28,7 @@
   }
 
   // ── Côté borne (iPad) ──────────────────────────────────────
-  function screen({ onInput, onAction, onStatus }) {
+  function screen({ onInput, onAction, onStatus, onState = () => {} }) {
     let code = cleanCode(store.get(CODE_KEY));
     if (code.length !== 5) {
       code = Array.from(crypto.getRandomValues(new Uint8Array(5)), (b) => ALPHABET[b % ALPHABET.length]).join('');
@@ -47,9 +47,13 @@
     };
 
     function start() {
+      onState('CONNEXION…');
       loadPeer().then(() => {
         peer = new window.Peer(peerId(code), PEER_OPTS);
+        peer.on('open', () => onState('PRÊTE'));
         peer.on('connection', (c) => {
+          // Le téléphone a trouvé la borne : si la liaison directe ne s'ouvre pas, le Wi-Fi la bloque.
+          setTimeout(() => { if (!c.open && !conn?.open) onState('LIAISON BLOQUÉE PAR LE WI-FI'); }, 12000);
           // Une seule manette : une nouvelle ne remplace l'actuelle que si celle-ci ne répond plus.
           if (conn && conn.open && Date.now() - lastMsg < 3000) {
             c.on('open', () => { c.send({ t: 'busy' }); setTimeout(() => c.close(), 500); });
@@ -71,12 +75,13 @@
         peer.on('disconnected', () => setTimeout(() => { if (!peer.destroyed) peer.reconnect(); }, 2000));
         peer.on('error', (e) => {
           // unavailable-id : l'ancienne session de la page n'est pas encore libérée → on réessaie.
+          onState(e.type === 'unavailable-id' ? 'REDÉMARRAGE…' : e.type === 'browser-incompatible' ? 'NAVIGATEUR INCOMPATIBLE' : 'SERVICE INJOIGNABLE');
           if (['unavailable-id', 'network', 'server-error', 'socket-error', 'socket-closed', 'browser-incompatible'].includes(e.type)) {
             peer.destroy();
             setTimeout(start, 4000);
           }
         });
-      }).catch(() => setTimeout(start, 8000));
+      }).catch(() => { onState('SERVICE INJOIGNABLE'); setTimeout(start, 8000); });
     }
     start();
 
@@ -250,7 +255,7 @@
           peer.on('error', (e) => {
             if (e.type === 'peer-unavailable') { scheduleRetry('Borne introuvable : vérifiez que la page de jeu est ouverte sur l’iPad (et le code).'); return; }
             try { peer.destroy(); } catch {}
-            scheduleRetry('Réseau indisponible, nouvelle tentative…');
+            scheduleRetry(`Service de connexion injoignable (${e.type}). Vérifiez Internet sur le téléphone.`);
           });
           peer.on('disconnected', () => { if (!peer.destroyed) peer.reconnect(); });
         }
@@ -258,7 +263,7 @@
           try { conn?.close(); } catch {}
           const c = peer.connect(peerId(code), { reliable: true, serialization: 'json' });
           conn = c;
-          const opened = setTimeout(() => { if (conn === c && !c.open) { try { c.close(); } catch {} scheduleRetry('La borne ne répond pas, nouvelle tentative…'); } }, 10000);
+          const opened = setTimeout(() => { if (conn === c && !c.open) { try { c.close(); } catch {} scheduleRetry('Borne trouvée, mais le Wi-Fi bloque la liaison entre appareils. Essayez le partage de connexion du téléphone.'); } }, 12000);
           c.on('open', () => { clearTimeout(opened); setOnline(true, STATES.coin); wakeLock(); sendState(); vibrate(30); });
           c.on('data', (m) => {
             if (!m) return;

@@ -356,12 +356,14 @@
 
   // ── Manette du stand : un téléphone Capsule dédié, relié en direct à l'iPad (?borne) ──
   const padActions = {};
+  let padStateText = () => {};
   let pad = null;
   if (STAND && !REMOTE && window.__orthoPad) {
     const ca = root.querySelector('.ca');
     pad = window.__orthoPad.screen({
       onInput: (s) => window.Game?.setRemote(s),
       onAction: (a) => padActions[a]?.(),
+      onState: (t) => padStateText(t),
       onStatus: (on) => {
         ca.classList.toggle('paired', on);
         $('ca-pad-code').hidden = on; // le code n'est affiché que tant qu'aucune manette n'est reliée
@@ -370,6 +372,7 @@
       },
     });
     $('ca-pad-code').textContent = `MANETTE : CODE ${pad.code}`;
+    padStateText = (t) => { $('ca-pad-code').textContent = `MANETTE : CODE ${pad.code} · ${t}`; };
     $('ca-pad-code').hidden = false;
   }
   syncFs();
