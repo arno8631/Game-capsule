@@ -1,4 +1,4 @@
-/* Ortho Invaders — Capsule · build 2026-10-01 */
+/* Ortho Invaders — Capsule · build 2026-11-04 */
 // Pixel art de ORTHO INVADERS — chaque caractère = 1 pixel, '.' = transparent.
 (function () {
   const PALETTE = {
@@ -2142,7 +2142,8 @@ window.__orthoInvadersGame = function () {
   const TAG_URL = 'https://qyibpvgbxxdilaewiyys.supabase.co/functions/v1/ortho-jeu-tag';
   const RULES = root.dataset.rules || '/pages/reglements-jeux-jo-2025';
   const REWARDS = [
-    { id: 'biomecanique', speaker: 'Dr Skander Ellouze', title: 'Replay Biomécanique : maîtriser les clés de l’excellence en orthodontie' },
+    { id: 'biomecanique', speaker: 'Dr Skander Ellouze', title: 'Replay Biomécanique : maîtriser les clés de l’excellence en orthodontie',
+      url: '/products/replay-biomecanique-maitriser-les-cles-de-lexcellence-en-orthodontie' },
     { id: 'contentions', speaker: 'Dr Philippides', title: 'Replay Adieu les urgences : maîtriser le collage des contentions' },
   ];
   const WON_KEY = `orthoInvadersWon:${customerId}`;
@@ -2215,6 +2216,7 @@ window.__orthoInvadersGame = function () {
   .ca-btn:focus-visible,.ca-rw:focus-visible,.ca-link:focus-visible{outline:3px solid var(--c);outline-offset:3px}
   .ca-prizes{display:grid;gap:2.4cqw}
   .ca-prize{display:grid;gap:1cqw;text-align:left;border:2px solid var(--m);background:rgba(18,6,46,.9);padding:2.6cqw 3cqw}
+  #capsule-arcade a.w{text-decoration:underline;text-underline-offset:.3em}
   .ca-prize .w,.ca-rw .w{font-family:'Press Start 2P',monospace;font-size:2.5cqw;color:var(--y);line-height:1.5}
   .ca-prize .t,.ca-rw .t{font-size:4.2cqw;line-height:1}
   .ca-rw{font:inherit;color:var(--ink);background:var(--bg);border:3px solid var(--m);padding:3cqw;cursor:pointer;text-align:left;display:grid;gap:1.4cqw}
@@ -2255,7 +2257,10 @@ window.__orthoInvadersGame = function () {
   style.textContent = css;
   document.head.appendChild(style);
 
-  const prizeCards = REWARDS.map((r) => `<div class="ca-prize"><span class="w">${esc(r.speaker.toUpperCase())} · 249 € OFFERT</span><span class="t">${esc(r.title)}</span></div>`).join('');
+  // Lot avec page produit : l'étiquette devient un lien vers la formation sur capsule (nouvel onglet).
+  const prizeCards = REWARDS.map((r) => `<div class="ca-prize">${r.url
+    ? `<a class="w" href="${esc(r.url)}" target="_blank" rel="noopener">VOIR LA FORMATION SUR CAPSULE ›</a>`
+    : `<span class="w">${esc(r.speaker.toUpperCase())} · 249 € OFFERT</span>`}<span class="t">${esc(r.title)}</span></div>`).join('');
   const back = encodeURIComponent(PAGE);
 
   root.innerHTML = `
