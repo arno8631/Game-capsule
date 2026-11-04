@@ -2032,6 +2032,7 @@ window.__orthoInvadersGame = function () {
     let retry = null;
     let onTv = () => {};   // messages de l'écran TV (parcours joueur, défini plus bas)
     let onLink = () => {}; // liaison ouverte / perdue
+    let helloSeen = false;
     const st = { x: 0, fire: false };
 
     const send = (m) => { if (conn?.open) { try { conn.send(m); } catch {} } };
@@ -2080,7 +2081,13 @@ window.__orthoInvadersGame = function () {
           const c = peer.connect(peerId(code), { reliable: true, serialization: 'json' });
           conn = c;
           const opened = setTimeout(() => { if (conn === c && !c.open) { try { c.close(); } catch {} scheduleRetry('Borne trouvée, mais le Wi-Fi bloque la liaison entre appareils. Essayez le partage de connexion du téléphone.'); } }, 12000);
-          c.on('open', () => { clearTimeout(opened); setOnline(true, STATES.coin); wakeLock(); sendState(); vibrate(30); onLink(); });
+          c.on('open', () => {
+            clearTimeout(opened); setOnline(true, STATES.coin); wakeLock(); sendState(); vibrate(30); onLink();
+            // L'écran se présente (« hello ») : on le lui redemande tant qu'il n'a pas répondu (borne iPad : pas de réponse).
+            let tries = 0;
+            const ask = () => { if (conn !== c || helloSeen || tries++ > 5) return; send({ t: 'hi' }); setTimeout(ask, 1500); };
+            ask();
+          });
           c.on('data', (m) => {
             if (!m) return;
             if (m.t === 'busy') { conn = null; setOnline(false, 'Une autre manette est déjà connectée à la borne.'); clearTimeout(retry); retry = setTimeout(connect, 5000); return; }
@@ -2360,6 +2367,7 @@ window.__orthoInvadersGame = function () {
 
     onTv = (m) => {
       if (m.t === 'hello' && m.mode === 'tv') {
+        helloSeen = true;
         if (!tvMode) {
           tvMode = true;
           let pending = null;
@@ -2838,6 +2846,7 @@ window.__orthoInvadersGame = function () {
     const attract = () => { if (playing) return; clearTimeout(backTimer); Game.stop(); show('ca-tv'); $('ca-tv-msg').textContent = TV_MSG[phoneState || 'none']; };
     padActions.tvStatus = (on) => { if (!on) { phoneState = 'off'; if (!playing && !$('ca-tv').hidden) $('ca-tv-msg').textContent = TV_MSG.off; } };
     padActions.message = (m) => {
+      if (m.t === 'hi') { pad.send({ t: 'hello', mode: 'tv' }); return; }
       if (m.t === 'ps') {
         phoneState = TV_MSG[m.s] ? m.s : 'none';
         // Nouveau joueur sur la manette : la TV quitte l'écran de fin et revient à l'accueil.

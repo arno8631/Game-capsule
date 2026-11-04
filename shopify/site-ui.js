@@ -453,6 +453,7 @@
     const attract = () => { if (playing) return; clearTimeout(backTimer); Game.stop(); show('ca-tv'); $('ca-tv-msg').textContent = TV_MSG[phoneState || 'none']; };
     padActions.tvStatus = (on) => { if (!on) { phoneState = 'off'; if (!playing && !$('ca-tv').hidden) $('ca-tv-msg').textContent = TV_MSG.off; } };
     padActions.message = (m) => {
+      if (m.t === 'hi') { pad.send({ t: 'hello', mode: 'tv' }); return; }
       if (m.t === 'ps') {
         phoneState = TV_MSG[m.s] ? m.s : 'none';
         // Nouveau joueur sur la manette : la TV quitte l'écran de fin et revient à l'accueil.
