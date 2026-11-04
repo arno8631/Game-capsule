@@ -20,8 +20,21 @@
   const PAGE = location.pathname;
   // Mode stand (tablette de la borne) : ?borne dans l'adresse → plein écran au premier toucher,
   // et on revient en mode stand après chaque déconnexion « Joueur suivant ».
-  const STAND = new URLSearchParams(location.search).has('borne') || (() => { try { return sessionStorage.getItem('orthoStand') === '1'; } catch { return false; } })();
+  const STAND = new URLSearchParams(location.search).has('borne') || new URLSearchParams(location.search).has('ecran')
+    || (() => { try { return sessionStorage.getItem('orthoStand') === '1' || sessionStorage.getItem('orthoEcran') === '1'; } catch { return false; } })();
   if (STAND) { try { sessionStorage.setItem('orthoStand', '1'); } catch {} }
+  // Mode écran (grande TV du stand) : ?ecran → la TV n'affiche que le jeu ; inscription, connexion,
+  // partie et gain se font sur le téléphone-manette. ?ecran&rotation=90 (ou 270) pour une TV posée
+  // à la verticale (les navigateurs de TV ne tournent pas l'image). ?ecran&rotation=0 pour annuler.
+  const qsTv = new URLSearchParams(location.search);
+  const ECRAN = qsTv.has('ecran') || (() => { try { return sessionStorage.getItem('orthoEcran') === '1'; } catch { return false; } })();
+  if (ECRAN) {
+    try { sessionStorage.setItem('orthoEcran', '1'); } catch {}
+    try { if (qsTv.has('rotation')) localStorage.setItem('orthoRotation', qsTv.get('rotation')); } catch {}
+    let rot = '';
+    try { rot = localStorage.getItem('orthoRotation') || ''; } catch {}
+    if (rot === '90' || rot === '270') document.documentElement.classList.add(`ortho-rot${rot}`);
+  }
   // Mode téléphone-manette (iPad du stand) : ?borne&serveur=https://…&cle=… une seule fois, mémorisé ;
   // ?local revient au jeu tactile sur la tablette.
   const qs = new URLSearchParams(location.search);
@@ -33,22 +46,12 @@
   } catch {}
   // Fonction de tag (Supabase capsule) : appelée sans clé, elle fait ses propres contrôles
   // (origine capsule-med.com, identifiant numérique, tags jeuJO uniquement).
-  const TAG_URL = 'https://qyibpvgbxxdilaewiyys.supabase.co/functions/v1/ortho-jeu-tag';
-  // Comptes créés depuis la borne du stand (?borne) : tag dédié en plus des tags jeuJO.
-  const BORNE_TAG = 'BorneJo2026';
+  const { TAG_URL, BORNE_TAG, TESTERS } = window.__orthoConfig;
   const REG_TAGS = ['jeuJO', 'jeuJO-2026', 'jeuJO-inscrit', ...(STAND ? [BORNE_TAG] : [])].join(', ');
   const RULES = root.dataset.rules || '/pages/reglements-jeux-jo-2025';
-  const REWARDS = [
-    // price : valeur de secours en € ; le prix réel est relu sur la fiche produit au chargement (url = fiche, jamais affichée).
-    { id: 'biomecanique', speaker: 'Dr Skander Ellouze', title: 'Replay Biomécanique : maîtriser les clés de l’excellence en orthodontie',
-      url: '/products/replay-biomecanique-maitriser-les-cles-de-lexcellence-en-orthodontie', price: 900 },
-    { id: 'contentions', speaker: 'Dr Philippides', title: 'Replay Adieu les urgences : maîtriser le collage des contentions',
-      url: '/products/replay-adieu-les-urgences-maitriser-le-collage-des-contentions', price: 249 },
-  ];
+  const REWARDS = window.__orthoConfig.REWARDS;
   const WON_KEY = `orthoInvadersWon:${customerId}`;
   const PLAYED_KEY = `orthoInvadersPlayed:${customerId}`; // une seule partie par participant
-  // Comptes de test Capsule (identifiants clients Shopify) : parties illimitées, pas de déconnexion auto
-  const TESTERS = ['23773949821273', '23276575129945', '23130642612569', '23662288142681', '23394139406681'];
   const TESTER = logged && TESTERS.includes(String(customerId));
   const LOGOUT_URL = `/account/logout?return_url=${encodeURIComponent(PAGE + (STAND ? '?borne' : ''))}`;
   // Remise à zéro par l'équipe (ex. partie interrompue) : ouvrir la page avec ?reset
@@ -139,6 +142,13 @@
   .ca-fire.down{transform:translateY(4px)}
   /* En partie : on libère un max de place pour l'écran de jeu */
   .ca.paired .ca-pad{display:none!important}
+  .ca.tv .ca-pad,.ca.tv .ca-bar > :not(#ca-pad-code){display:none!important}
+  .ca.tv .ca-tv-msg{color:#ffd319;font-size:5cqw}
+  .ca.tv .ca-bar #ca-pad-code{font-size:clamp(12px,1.6vmax,22px)}
+  html.ortho-rot90 body #capsule-arcade,html.ortho-rot270 body #capsule-arcade{inset:auto!important;top:0!important;left:0!important;
+    width:100vh!important;height:100vw!important;transform-origin:0 0}
+  html.ortho-rot90 body #capsule-arcade{transform:rotate(90deg) translateY(-100%)}
+  html.ortho-rot270 body #capsule-arcade{transform:rotate(-90deg) translateX(-100%)}
   .ca-bar .ca-padcode{color:#2de2e6}
   .ca.playing{gap:.6vh}
   .ca.playing .ca-bar{display:none}
@@ -165,7 +175,7 @@
   const back = encodeURIComponent(PAGE);
 
   root.innerHTML = `
-  <div class="ca${logged ? ' logged' : ''}${STAND ? ' stand' : ''}">
+  <div class="ca${logged && !ECRAN ? ' logged' : ''}${STAND ? ' stand' : ''}${ECRAN ? ' tv' : ''}">
     <header class="ca-head"><span class="b">CAPSULE</span><span class="t">ORTHO INVADERS</span><span class="s">Défendez l'arcade dentaire !</span></header>
     <div class="ca-stage" data-fit>
       <div class="ca-screen">
@@ -173,6 +183,19 @@
         <div class="ca-crt" aria-hidden="true"></div>
 
         <!-- Non connecté : accueil de la borne -->
+        <!-- Écran TV : accueil (le joueur s'inscrit et joue avec le téléphone-manette) -->
+        <div class="ca-ov" id="ca-tv" hidden><div class="ca-card">
+          <p class="ca-t big ca-blink">INSERT<br>COIN</p>
+          <p class="ca-p">Protégez l'arcade dentaire, battez la <b>Méga-Carie</b> et gagnez un <b>replay de formation</b>.</p>
+          <p class="ca-h">★ À GAGNER ★</p>
+          <div class="ca-prizes">${prizeCards}</div>
+          <p class="ca-p ca-tv-msg" id="ca-tv-msg">Prenez la manette : inscrivez-vous ou connectez-vous avec votre compte Capsule, puis jouez !</p>
+          <p class="ca-p" style="font-size:4cqw">Jeu gratuit réservé aux praticiens · une partie par compte.</p>
+        </div></div>
+        <div class="ca-ov" id="ca-tv-end" hidden><div class="ca-card">
+          <p class="ca-t" id="ca-tv-end-t"></p>
+          <p class="ca-p" id="ca-tv-end-p"></p>
+        </div></div>
         <div class="ca-ov" id="ca-coin"><div class="ca-card">
           <p class="ca-t big ca-blink">INSERT<br>COIN</p>
           <p class="ca-p">Protégez l'arcade dentaire, battez la <b>Méga-Carie</b> et gagnez un <b>replay de formation</b>.</p>
@@ -366,7 +389,7 @@
     root.addEventListener('pointerdown', auto, { capture: true });
   }
 
-  const overlays = ['ca-coin', 'ca-register', 'ca-login', 'ca-start', 'ca-end', 'ca-sent', 'ca-done', 'ca-pause', 'ca-r-attract', 'ca-r-ready', 'ca-r-winner', 'ca-r-off'];
+  const overlays = ['ca-tv', 'ca-tv-end', 'ca-coin', 'ca-register', 'ca-login', 'ca-start', 'ca-end', 'ca-sent', 'ca-done', 'ca-pause', 'ca-r-attract', 'ca-r-ready', 'ca-r-winner', 'ca-r-off'];
   const PAD_STATES = { 'ca-pause': 'pause', 'ca-start': 'start', 'ca-end': 'end', 'ca-sent': 'end', 'ca-done': 'end' };
   let padState = 'coin';
   const show = (id) => {
@@ -385,12 +408,15 @@
     pad = window.__orthoPad.screen({
       onInput: (s) => window.Game?.setRemote(s),
       onAction: (a) => padActions[a]?.(),
+      onMessage: (m) => padActions.message?.(m),
       onState: (t) => padStateText(t),
       onStatus: (on) => {
         ca.classList.toggle('paired', on);
         $('ca-pad-code').hidden = on; // le code n'est affiché que tant qu'aucune manette n'est reliée
         setTimeout(() => window.Game?.fit?.(), 50);
         if (on) pad.send({ t: 'st', s: padState });
+        if (on && ECRAN) pad.send({ t: 'hello', mode: 'tv' });
+        if (ECRAN) padActions.tvStatus?.(on);
       },
     });
     $('ca-pad-code').textContent = `MANETTE : CODE ${pad.code}`;
@@ -410,6 +436,59 @@
     const prof = $('ca-prof').value;
     $('ca-tags').value = prof ? `${REG_TAGS}, ${prof}` : REG_TAGS;
   });
+
+  if (ECRAN && pad) { startTv(); return; }
+
+  // ── Écran TV : le téléphone-manette envoie « start » ; la TV joue puis renvoie le résultat ──
+  function startTv() {
+    let playing = false;
+    let backTimer = null;
+    let phoneState = null;
+    const TV_MSG = {
+      none: 'Prenez la manette : inscrivez-vous ou connectez-vous avec votre compte Capsule, puis jouez !',
+      guest: 'Inscrivez-vous ou connectez-vous sur la manette avec votre compte Capsule.',
+      ready: 'Joueur connecté ! Appuyez sur JOUER sur la manette.',
+      off: 'Manette non connectée : ouvrez la manette sur le téléphone du stand.',
+    };
+    const attract = () => { if (playing) return; clearTimeout(backTimer); Game.stop(); show('ca-tv'); $('ca-tv-msg').textContent = TV_MSG[phoneState || 'none']; };
+    padActions.tvStatus = (on) => { if (!on) { phoneState = 'off'; if (!playing && !$('ca-tv').hidden) $('ca-tv-msg').textContent = TV_MSG.off; } };
+    padActions.message = (m) => {
+      if (m.t === 'ps') {
+        phoneState = TV_MSG[m.s] ? m.s : 'none';
+        // Nouveau joueur sur la manette : la TV quitte l'écran de fin et revient à l'accueil.
+        if (!playing && m.s === 'guest') attract();
+        else if (!playing && !$('ca-tv').hidden) $('ca-tv-msg').textContent = TV_MSG[phoneState];
+        return;
+      }
+      if (m.t !== 'start' || playing) return;
+      playing = true;
+      clearTimeout(backTimer);
+      try { Sfx.unlock(); } catch {}
+      show(null);
+      const t0 = Date.now();
+      Game.start({
+        name: 'DOCTEUR',
+        onFeedback: (d) => pad.send({ t: 'fb', ...d }),
+        onEnd: ({ won, score, wave }) => {
+          playing = false;
+          pad.send({ t: 'end', won, score, wave, seconds: Math.round((Date.now() - t0) / 1000) });
+          show('ca-tv-end');
+          $('ca-tv-end-t').textContent = won ? '★ VICTOIRE ★' : 'GAME OVER';
+          $('ca-tv-end-p').textContent = won
+            ? `Bravo ! ${score} points. Choisissez votre replay offert sur la manette.`
+            : `${score} points. La Méga-Carie a gagné cette fois… Merci d'avoir joué !`;
+          backTimer = setTimeout(attract, won ? 60000 : 12000);
+        },
+      });
+    };
+    padActions.fire = () => { if (Game.paused) { show(null); Game.paused = false; } };
+    padActions.pause = () => { if (Game.paused) { show(null); Game.paused = false; } else if (playing) { Game.paused = true; if (Game.paused) show('ca-pause'); } };
+    // Le son des TV ne démarre qu'après une touche de la télécommande (OK) ou un clic.
+    const unlock = () => { try { Sfx.unlock(); } catch {} };
+    root.addEventListener('pointerdown', unlock);
+    addEventListener('keydown', unlock);
+    attract();
+  }
 
   // ── Borne : connexion et inscription envoyées en arrière-plan, sans jamais quitter l'écran du jeu ──
   // Une erreur Shopify (mauvais mot de passe, email déjà inscrit) afficherait sinon sa propre page.

@@ -1781,6 +1781,24 @@ window.__orthoInvadersGame = function () {
   };
   const cleanCode = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
   const clamp = (x) => Math.max(-1, Math.min(1, Number(x) || 0));
+  const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // Réglages partagés par la borne (site-ui.js) et la manette.
+  window.__orthoConfig = {
+    // Fonction de tag (Supabase capsule) : appelée sans clé, elle fait ses propres contrôles.
+    TAG_URL: 'https://qyibpvgbxxdilaewiyys.supabase.co/functions/v1/ortho-jeu-tag',
+    // Comptes créés depuis la borne du stand : tag dédié en plus des tags jeuJO.
+    BORNE_TAG: 'BorneJo2026',
+    // Comptes de test Capsule (identifiants clients Shopify) : parties illimitées, pas de déconnexion auto.
+    TESTERS: ['23773949821273', '23276575129945', '23130642612569', '23662288142681', '23394139406681'],
+    // price : valeur de secours en € ; le prix réel est relu sur la fiche produit (url, jamais affichée).
+    REWARDS: [
+      { id: 'biomecanique', speaker: 'Dr Skander Ellouze', title: 'Replay Biomécanique : maîtriser les clés de l’excellence en orthodontie',
+        url: '/products/replay-biomecanique-maitriser-les-cles-de-lexcellence-en-orthodontie', price: 900 },
+      { id: 'contentions', speaker: 'Dr Philippides', title: 'Replay Adieu les urgences : maîtriser le collage des contentions',
+        url: '/products/replay-adieu-les-urgences-maitriser-le-collage-des-contentions', price: 249 },
+    ],
+  };
 
   let peerLib = null;
   function loadPeer() {
@@ -1796,7 +1814,7 @@ window.__orthoInvadersGame = function () {
   }
 
   // ── Côté borne (iPad) ──────────────────────────────────────
-  function screen({ onInput, onAction, onStatus, onState = () => {} }) {
+  function screen({ onInput, onAction, onStatus, onState = () => {}, onMessage = () => {} }) {
     let code = cleanCode(store.get(CODE_KEY));
     if (code.length !== 5) {
       code = Array.from(crypto.getRandomValues(new Uint8Array(5)), (b) => ALPHABET[b % ALPHABET.length]).join('');
@@ -1836,6 +1854,7 @@ window.__orthoInvadersGame = function () {
             stale = false;
             if (m.t === 'in') onInput({ x: clamp(m.x), fire: Boolean(m.fire) });
             else if (m.t === 'act') onAction(String(m.a));
+            else onMessage(m);
           });
           c.on('close', () => drop(c));
           c.on('error', () => drop(c));
@@ -1940,6 +1959,32 @@ window.__orthoInvadersGame = function () {
       .mp-form input{font-size:22px;padding:8px 6px}
     }
     .mp.off .mp-dirs,.mp.off .mp-fire,.mp.off .mp-pause{opacity:.35}
+    /* Écran TV : le parcours du joueur (compte, partie, gain) se fait sur la manette */
+    .mp{position:relative}
+    .mp-acc{position:absolute;z-index:5;left:0;right:0;bottom:0;top:calc(max(14px,env(safe-area-inset-top)) + 34px);overflow:auto;
+      padding:8px max(16px,env(safe-area-inset-right)) max(22px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+      background:linear-gradient(180deg,#0b0322,#05010f);touch-action:auto;user-select:text;-webkit-user-select:text}
+    .mp-v{display:grid;gap:14px;max-width:460px;margin:0 auto}
+    .mp-h{font-family:'Press Start 2P',monospace;font-size:clamp(15px,5vw,22px);line-height:1.4;text-align:center;color:var(--y);text-shadow:2px 2px 0 var(--m);margin:4px 0}
+    .mp-p{font-size:clamp(20px,6vw,26px);line-height:1.05;margin:0;color:#e9e3ff;text-align:center}
+    .mp-err{font-size:20px;line-height:1.05;margin:0;color:#ff7ba3}
+    .mp-prize{border:2px solid var(--m);padding:10px 12px;display:grid;gap:4px;background:rgba(18,6,46,.9)}
+    .mp-prize b{font-family:'Press Start 2P',monospace;font-weight:normal;font-size:10px;line-height:1.5;color:var(--y)}
+    .mp-prize span{font-size:20px;line-height:1}
+    .mp-prize b span{font-size:inherit;line-height:inherit}
+    button.mp-prize{font:inherit;color:#f5f3ff;text-align:left;cursor:pointer}
+    button.mp-prize.on{border-color:var(--c);box-shadow:0 0 0 2px var(--c)}
+    .mp-acc label{display:grid;gap:6px;font-family:'Press Start 2P',monospace;font-size:9px;line-height:1.4;color:#b9a8e8}
+    .mp-acc input,.mp-acc select{font:inherit;font-family:'VT323',monospace;font-size:20px;padding:8px 10px;color:#f5f3ff;background:#12062e;border:2px solid var(--v);border-radius:0;width:100%}
+    .mp-acc label.chk{display:flex;gap:10px;align-items:flex-start;font-family:'VT323',monospace;font-size:18px;line-height:1.05}
+    .mp-acc label.chk input{width:20px;height:20px;flex:none;accent-color:var(--m)}
+    .mp-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .mp-acc .mp-btn{width:100%;font-size:12px;padding:16px 12px}
+    .mp-acc .mp-btn.alt{background:var(--c);box-shadow:0 4px 0 #178a8d}
+    .mp-acc .mp-btn.big{font-size:18px;padding:26px 12px}
+    .mp-acc .mp-btn:disabled{opacity:.45}
+    .mp-link{font-family:'Press Start 2P',monospace;font-size:9px;color:#b9a8e8;background:none;border:0;text-decoration:underline;padding:6px;justify-self:center}
+    .mp-count{font-family:'Press Start 2P',monospace;font-size:9px;color:#8f82b8;text-align:center;margin:0}
     `;
     document.head.appendChild(style);
 
@@ -1966,6 +2011,7 @@ window.__orthoInvadersGame = function () {
         <button class="mp-dir" data-dir="1" aria-label="Droite">▶</button>
       </div>
       <button class="mp-fire" id="mp-fire" aria-label="Tirer">TIR</button>
+      <section class="mp-acc" id="mp-acc" hidden></section>
     </div>`;
 
     const $ = (id) => document.getElementById(id);
@@ -1984,6 +2030,8 @@ window.__orthoInvadersGame = function () {
     let peer = null;
     let conn = null;
     let retry = null;
+    let onTv = () => {};   // messages de l'écran TV (parcours joueur, défini plus bas)
+    let onLink = () => {}; // liaison ouverte / perdue
     const st = { x: 0, fire: false };
 
     const send = (m) => { if (conn?.open) { try { conn.send(m); } catch {} } };
@@ -2032,15 +2080,16 @@ window.__orthoInvadersGame = function () {
           const c = peer.connect(peerId(code), { reliable: true, serialization: 'json' });
           conn = c;
           const opened = setTimeout(() => { if (conn === c && !c.open) { try { c.close(); } catch {} scheduleRetry('Borne trouvée, mais le Wi-Fi bloque la liaison entre appareils. Essayez le partage de connexion du téléphone.'); } }, 12000);
-          c.on('open', () => { clearTimeout(opened); setOnline(true, STATES.coin); wakeLock(); sendState(); vibrate(30); });
+          c.on('open', () => { clearTimeout(opened); setOnline(true, STATES.coin); wakeLock(); sendState(); vibrate(30); onLink(); });
           c.on('data', (m) => {
             if (!m) return;
             if (m.t === 'busy') { conn = null; setOnline(false, 'Une autre manette est déjà connectée à la borne.'); clearTimeout(retry); retry = setTimeout(connect, 5000); return; }
             if (m.t === 'st') { msg(STATES[m.s] ?? ''); if (m.s !== 'play') $('mp-hud').textContent = ''; }
             if (m.haptic) vibrate(HAPTICS[m.haptic] || 20);
             if (m.hud) $('mp-hud').textContent = `SCORE ${String(m.hud.score).padStart(6, '0')}  ${'♥'.repeat(Math.max(0, m.hud.lives))}`;
+            onTv(m);
           });
-          c.on('close', () => { if (conn === c) { conn = null; scheduleRetry('Connexion perdue, reconnexion…'); } });
+          c.on('close', () => { if (conn === c) { conn = null; onLink(); scheduleRetry('Connexion perdue, reconnexion…'); } });
           c.on('error', () => { if (conn === c) { conn = null; scheduleRetry('Connexion perdue, reconnexion…'); } });
         };
         if (peer.open) go(); else peer.once('open', go);
@@ -2098,6 +2147,236 @@ window.__orthoInvadersGame = function () {
     root.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('gesturestart', (e) => e.preventDefault());
 
+    // ── Écran TV : tout le parcours du joueur se fait ici (compte, partie, gain, déconnexion) ──
+    const CFG = window.__orthoConfig;
+    const PAGE = location.pathname;
+    const HOME = `${PAGE}?manette`;
+    const cidRaw = root.dataset.customerId || window.ShopifyAnalytics?.meta?.page?.customerId || window.__st?.cid || '';
+    const cid = /^\d+$/.test(String(cidRaw)) ? String(cidRaw) : '';
+    const logged = Boolean(cid);
+    const tester = logged && CFG.TESTERS.includes(cid);
+    const PLAYED_KEY = `orthoInvadersPlayed:${cid}`;
+    const AUTH_KEY = 'orthoPadAuth';
+    const REG_TAGS = ['jeuJO', 'jeuJO-2026', 'jeuJO-inscrit', CFG.BORNE_TAG].join(', ');
+    if (new URLSearchParams(location.search).has('reset')) {
+      try { Object.keys(localStorage).filter((k) => k.startsWith('orthoInvaders')).forEach((k) => localStorage.removeItem(k)); } catch {}
+    }
+    const acc = $('mp-acc');
+    const euros = (n) => `${Number(n).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} €`;
+    const prices = {};
+    CFG.REWARDS.forEach((r) => {
+      prices[r.id] = r.price;
+      fetch(`${r.url}.js`).then((res) => (res.ok ? res.json() : null)).then((prod) => {
+        if (!prod || !Number.isFinite(prod.price)) return;
+        prices[r.id] = prod.price / 100;
+        acc.querySelectorAll(`[data-price="${r.id}"]`).forEach((el) => { el.textContent = euros(prices[r.id]); });
+      }).catch(() => {});
+    });
+    let tvMode = false;
+    let view = null;
+    let countdown = null;
+    let result = null;
+
+    const logout = () => {
+      clearInterval(countdown);
+      fetch('/account/logout', { credentials: 'same-origin' }).catch(() => {}).finally(() => location.replace(HOME));
+    };
+    function countTo(seconds, label) {
+      clearInterval(countdown);
+      const el = acc.querySelector('.mp-count');
+      if (!el) return;
+      if (tester) { el.textContent = 'Compte test : pas de déconnexion automatique'; return; }
+      let left = seconds;
+      const tick = () => { el.textContent = `${label} dans ${left} s`; if (left-- <= 0) logout(); };
+      tick();
+      countdown = setInterval(tick, 1000);
+    }
+    const prizeList = () => CFG.REWARDS.map((r) => `<div class="mp-prize"><b>${esc(r.speaker.toUpperCase())} · <span data-price="${r.id}">${euros(prices[r.id])}</span> OFFERT</b><span>${esc(r.title)}</span></div>`).join('');
+    const nextBtns = () => `${tester ? '<button type="button" class="mp-btn alt" data-act="replay">↻ Rejouer (compte test)</button>' : ''}
+      <button type="button" class="mp-btn" data-act="logout">▶ Joueur suivant</button><p class="mp-count"></p>`;
+
+    const VIEWS = {
+      guest: () => `<p class="mp-h">INSERT COIN</p>
+        <p class="mp-p">Une partie gratuite par praticien. Battez la Méga-Carie et gagnez :</p>${prizeList()}
+        <button type="button" class="mp-btn" data-go="register">▶ Créer mon compte et jouer</button>
+        <button type="button" class="mp-btn alt" data-go="login">J'ai déjà un compte</button>`,
+      register: () => `<p class="mp-h">NOUVEAU JOUEUR</p><p class="mp-err" hidden></p>
+        <form class="mp-v" method="post" action="/account" accept-charset="UTF-8" id="mp-reg">
+          <input type="hidden" name="form_type" value="create_customer"><input type="hidden" name="utf8" value="✓">
+          <input type="hidden" name="customer[tags]" id="mp-tags" value="${REG_TAGS}">
+          <input type="hidden" name="return_to" value="${esc(HOME)}">
+          <div class="mp-row"><label>PRÉNOM<input name="customer[first_name]" id="mp-fn" autocomplete="given-name" required></label>
+            <label>NOM<input name="customer[last_name]" id="mp-ln" autocomplete="family-name" required></label></div>
+          <label>PROFESSION<select id="mp-prof" required><option value="">Choisir…</option>
+            <option value="Orthodontiste">Orthodontiste</option><option value="Omnipraticien">Chirurgien-dentiste omnipraticien</option>
+            <option value="Assistante">Assistant(e) dentaire</option><option value="Etudiant">Étudiant(e) / interne</option>
+            <option value="Autre-profession">Autre</option></select></label>
+          <label>EMAIL PROFESSIONNEL<input type="email" name="customer[email]" id="mp-em" autocomplete="email" required></label>
+          <label>MOT DE PASSE (6 CARACTÈRES MIN.)<input type="password" name="customer[password]" id="mp-pw" autocomplete="new-password" minlength="6" required></label>
+          <label class="chk"><input type="checkbox" name="customer[accepts_marketing]" value="true" checked>Je souhaite recevoir les nouveautés Capsule : formations, replays, cas cliniques.</label>
+          <button class="mp-btn" type="submit">▶ Créer mon compte</button>
+        </form>
+        <button type="button" class="mp-link" data-go="login">J'ai déjà un compte</button>
+        <button type="button" class="mp-link" data-go="guest">◀ Retour</button>`,
+      login: () => `<p class="mp-h">CONNEXION</p><p class="mp-p">Votre compte Capsule habituel.</p><p class="mp-err" hidden></p>
+        <form class="mp-v" method="post" action="/account/login" accept-charset="UTF-8" id="mp-login">
+          <input type="hidden" name="form_type" value="customer_login"><input type="hidden" name="utf8" value="✓">
+          <input type="hidden" name="return_url" value="${esc(HOME)}">
+          <label>EMAIL<input type="email" name="customer[email]" id="mp-lem" autocomplete="email" required></label>
+          <label>MOT DE PASSE<input type="password" name="customer[password]" id="mp-lpw" autocomplete="current-password" required></label>
+          <button class="mp-btn alt" type="submit">▶ Me connecter</button>
+        </form>
+        <p class="mp-p" style="font-size:18px">Mot de passe oublié ? Demandez à l'équipe Capsule du stand.</p>
+        <button type="button" class="mp-link" data-go="register">Créer un compte</button>
+        <button type="button" class="mp-link" data-go="guest">◀ Retour</button>`,
+      ready: () => `<p class="mp-h">✓ CONNECTÉ</p>
+        <p class="mp-p">${tester ? 'Compte test : parties illimitées.' : 'Vous avez droit à une partie. Regardez le grand écran !'}</p>
+        <button type="button" class="mp-btn big" data-act="play" id="mp-play">▶ JOUER</button>
+        <p class="mp-p" id="mp-wait" style="font-size:18px" hidden>En attente du grand écran…</p>
+        <button type="button" class="mp-link" data-act="logout">Ce n'est pas moi : changer de joueur</button>`,
+      played: () => `<p class="mp-h">DÉJÀ JOUÉ</p><p class="mp-p">Vous avez déjà joué votre partie. Merci et à bientôt sur capsule-med.com !</p>${nextBtns()}`,
+      lose: () => `<p class="mp-h">GAME OVER</p><p class="mp-p">${result.score} points. La Méga-Carie a gagné cette fois… Merci d'avoir joué !</p>${nextBtns()}`,
+      win: () => `<p class="mp-h">★ VICTOIRE ★</p><p class="mp-p">Bravo ! ${result.score} points. Choisissez votre replay offert :</p>
+        ${CFG.REWARDS.map((r) => `<button type="button" class="mp-prize" data-rw="${r.id}"><b>${esc(r.speaker.toUpperCase())} · <span data-price="${r.id}">${euros(prices[r.id])}</span></b><span>${esc(r.title)}</span></button>`).join('')}
+        <form class="mp-v" method="post" action="/contact#contact_form" accept-charset="UTF-8" id="mp-win">
+          <input type="hidden" name="form_type" value="contact"><input type="hidden" name="utf8" value="✓">
+          <input type="hidden" name="contact[name]" value="Gagnant Ortho Invaders"><input type="hidden" name="contact[body]" id="mp-body">
+          <label>VOTRE EMAIL DE COMPTE CAPSULE<input type="email" name="contact[email]" id="mp-wem" autocomplete="email" required></label>
+          <button class="mp-btn" type="submit" id="mp-send" disabled>Valider mon gain</button>
+        </form><p class="mp-count"></p>`,
+      thanks: () => `<p class="mp-h">GAIN ENREGISTRÉ</p><p class="mp-p">L'équipe Capsule vous envoie par email votre code personnel pour « ${esc(result.reward.title)} ».</p>${nextBtns()}`,
+    };
+    const PS = { guest: 'guest', register: 'guest', login: 'guest', ready: 'ready' };
+
+    function go(v) {
+      view = v;
+      clearInterval(countdown);
+      if (!v) { acc.hidden = true; return; }
+      acc.innerHTML = `<div class="mp-v">${VIEWS[v]()}</div>`;
+      acc.hidden = false;
+      acc.scrollTop = 0;
+      send({ t: 'ps', s: PS[v] || v });
+      acc.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
+      acc.querySelectorAll('[data-act="logout"]').forEach((b) => b.addEventListener('click', logout));
+      acc.querySelectorAll('[data-act="replay"]').forEach((b) => b.addEventListener('click', () => go('ready')));
+      if (v === 'register' || v === 'login') bindAuth(v);
+      if (v === 'ready') { $('mp-play').addEventListener('click', play); syncReady(); }
+      if (v === 'played') countTo(10, 'Déconnexion automatique');
+      if (v === 'lose') countTo(12, 'Joueur suivant');
+      if (v === 'thanks') countTo(15, 'Joueur suivant');
+      if (v === 'win') bindWin();
+    }
+    function syncReady() {
+      if (view !== 'ready') return;
+      const ok = Boolean(conn?.open);
+      $('mp-play').disabled = !ok;
+      $('mp-wait').hidden = ok;
+    }
+
+    // Connexion / inscription en arrière-plan : on ne quitte jamais la manette.
+    function bindAuth(kind) {
+      const form = acc.querySelector('form');
+      try {
+        if (sessionStorage.getItem(AUTH_KEY) === kind) {
+          sessionStorage.removeItem(AUTH_KEY);
+          const err = acc.querySelector('.mp-err');
+          err.textContent = kind === 'register'
+            ? 'Compte non créé : cette adresse a peut-être déjà un compte Capsule (touchez « J’ai déjà un compte »).'
+            : 'Connexion refusée : vérifiez l’email et le mot de passe.';
+          err.hidden = false;
+        }
+      } catch {}
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (kind === 'register') { const prof = $('mp-prof').value; $('mp-tags').value = prof ? `${REG_TAGS}, ${prof}` : REG_TAGS; }
+        form.querySelector('[type=submit]').disabled = true;
+        try { sessionStorage.setItem(AUTH_KEY, kind); } catch {}
+        try {
+          const res = await fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin' });
+          if (/\/challenge/.test(res.url)) { try { sessionStorage.removeItem(AUTH_KEY); } catch {} form.submit(); return; }
+        } catch {}
+        location.replace(HOME);
+      });
+    }
+
+    function play() {
+      if (!conn?.open) { syncReady(); return; }
+      if (!tester) {
+        if (store.get(PLAYED_KEY)) { go('played'); return; }
+        store.set(PLAYED_KEY, String(Date.now()));
+      }
+      send({ t: 'start' });
+      go(null);
+      msg('');
+    }
+
+    function bindWin() {
+      let reward = null;
+      countTo(180, 'Déconnexion automatique');
+      acc.querySelectorAll('[data-rw]').forEach((b) => b.addEventListener('click', () => {
+        reward = CFG.REWARDS.find((r) => r.id === b.dataset.rw);
+        acc.querySelectorAll('[data-rw]').forEach((x) => x.classList.toggle('on', x === b));
+        $('mp-send').disabled = false;
+      }));
+      const form = $('mp-win');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!reward) return;
+        const when = new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
+        $('mp-body').value = [
+          tester ? '[COMPTE TEST — ne pas créer de code]' : 'NOUVEAU GAGNANT — ORTHO INVADERS (borne TV du stand)',
+          result.seconds < 90 ? '⚠ PARTIE ANORMALEMENT COURTE (moins de 90 s) : vérifier avant de créer le code.' : 'Durée de partie normale.',
+          `Replay choisi : ${reward.title} (${reward.speaker})`,
+          `Email déclaré : ${$('mp-wem').value}`,
+          `Compte client Shopify : ${cid}`,
+          `Score : ${result.score} · Durée de la partie : ${result.seconds} s · Vague : ${result.wave}`,
+          `Date : ${when}`,
+          'Appareil : grand écran du stand + téléphone-manette',
+          '',
+          'À faire : Réductions > Créer > Montant de réduction sur les produits, 100 %, produit = replay choisi,',
+          'Admissibilité = ce client uniquement, Limite = 1 utilisation. Puis envoyer le code au gagnant.',
+        ].join('\n');
+        $('mp-send').disabled = true;
+        if (!tester) store.set(`orthoInvadersWon:${cid}`, reward.id);
+        try {
+          const res = await fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin' });
+          if (/\/challenge/.test(res.url)) { form.submit(); return; }
+        } catch {}
+        result.reward = reward;
+        go('thanks');
+      });
+    }
+
+    // Tag Shopify jeuJO de chaque praticien connecté (hors comptes test), une fois par session.
+    if (logged && !tester) {
+      const k = `orthoTagged:${cid}`;
+      let done = false;
+      try { done = sessionStorage.getItem(k) === '1'; } catch {}
+      if (!done) {
+        fetch(CFG.TAG_URL, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customer_id: cid }) })
+          .then((r) => { if (r.ok) { try { sessionStorage.setItem(k, '1'); } catch {} } }).catch(() => {});
+      }
+    }
+
+    onTv = (m) => {
+      if (m.t === 'hello' && m.mode === 'tv') {
+        if (!tvMode) {
+          tvMode = true;
+          let pending = null;
+          try { pending = sessionStorage.getItem(AUTH_KEY); } catch {}
+          if (!logged) go(pending === 'register' || pending === 'login' ? pending : 'guest');
+          else { try { sessionStorage.removeItem(AUTH_KEY); } catch {} go(!tester && store.get(PLAYED_KEY) ? 'played' : 'ready'); }
+        } else if (view) { send({ t: 'ps', s: PS[view] || view }); syncReady(); }
+        return;
+      }
+      if (m.t === 'end' && tvMode) {
+        result = { won: Boolean(m.won), score: Number(m.score) || 0, wave: Number(m.wave) || 0, seconds: Number(m.seconds) || 0 };
+        vibrate(m.won ? HAPTICS.win : HAPTICS.lose);
+        go(result.won ? 'win' : 'lose');
+      }
+    };
+    onLink = () => syncReady();
+
     connect();
   }
 
@@ -2126,8 +2405,21 @@ window.__orthoInvadersGame = function () {
   const PAGE = location.pathname;
   // Mode stand (tablette de la borne) : ?borne dans l'adresse → plein écran au premier toucher,
   // et on revient en mode stand après chaque déconnexion « Joueur suivant ».
-  const STAND = new URLSearchParams(location.search).has('borne') || (() => { try { return sessionStorage.getItem('orthoStand') === '1'; } catch { return false; } })();
+  const STAND = new URLSearchParams(location.search).has('borne') || new URLSearchParams(location.search).has('ecran')
+    || (() => { try { return sessionStorage.getItem('orthoStand') === '1' || sessionStorage.getItem('orthoEcran') === '1'; } catch { return false; } })();
   if (STAND) { try { sessionStorage.setItem('orthoStand', '1'); } catch {} }
+  // Mode écran (grande TV du stand) : ?ecran → la TV n'affiche que le jeu ; inscription, connexion,
+  // partie et gain se font sur le téléphone-manette. ?ecran&rotation=90 (ou 270) pour une TV posée
+  // à la verticale (les navigateurs de TV ne tournent pas l'image). ?ecran&rotation=0 pour annuler.
+  const qsTv = new URLSearchParams(location.search);
+  const ECRAN = qsTv.has('ecran') || (() => { try { return sessionStorage.getItem('orthoEcran') === '1'; } catch { return false; } })();
+  if (ECRAN) {
+    try { sessionStorage.setItem('orthoEcran', '1'); } catch {}
+    try { if (qsTv.has('rotation')) localStorage.setItem('orthoRotation', qsTv.get('rotation')); } catch {}
+    let rot = '';
+    try { rot = localStorage.getItem('orthoRotation') || ''; } catch {}
+    if (rot === '90' || rot === '270') document.documentElement.classList.add(`ortho-rot${rot}`);
+  }
   // Mode téléphone-manette (iPad du stand) : ?borne&serveur=https://…&cle=… une seule fois, mémorisé ;
   // ?local revient au jeu tactile sur la tablette.
   const qs = new URLSearchParams(location.search);
@@ -2139,22 +2431,12 @@ window.__orthoInvadersGame = function () {
   } catch {}
   // Fonction de tag (Supabase capsule) : appelée sans clé, elle fait ses propres contrôles
   // (origine capsule-med.com, identifiant numérique, tags jeuJO uniquement).
-  const TAG_URL = 'https://qyibpvgbxxdilaewiyys.supabase.co/functions/v1/ortho-jeu-tag';
-  // Comptes créés depuis la borne du stand (?borne) : tag dédié en plus des tags jeuJO.
-  const BORNE_TAG = 'BorneJo2026';
+  const { TAG_URL, BORNE_TAG, TESTERS } = window.__orthoConfig;
   const REG_TAGS = ['jeuJO', 'jeuJO-2026', 'jeuJO-inscrit', ...(STAND ? [BORNE_TAG] : [])].join(', ');
   const RULES = root.dataset.rules || '/pages/reglements-jeux-jo-2025';
-  const REWARDS = [
-    // price : valeur de secours en € ; le prix réel est relu sur la fiche produit au chargement (url = fiche, jamais affichée).
-    { id: 'biomecanique', speaker: 'Dr Skander Ellouze', title: 'Replay Biomécanique : maîtriser les clés de l’excellence en orthodontie',
-      url: '/products/replay-biomecanique-maitriser-les-cles-de-lexcellence-en-orthodontie', price: 900 },
-    { id: 'contentions', speaker: 'Dr Philippides', title: 'Replay Adieu les urgences : maîtriser le collage des contentions',
-      url: '/products/replay-adieu-les-urgences-maitriser-le-collage-des-contentions', price: 249 },
-  ];
+  const REWARDS = window.__orthoConfig.REWARDS;
   const WON_KEY = `orthoInvadersWon:${customerId}`;
   const PLAYED_KEY = `orthoInvadersPlayed:${customerId}`; // une seule partie par participant
-  // Comptes de test Capsule (identifiants clients Shopify) : parties illimitées, pas de déconnexion auto
-  const TESTERS = ['23773949821273', '23276575129945', '23130642612569', '23662288142681', '23394139406681'];
   const TESTER = logged && TESTERS.includes(String(customerId));
   const LOGOUT_URL = `/account/logout?return_url=${encodeURIComponent(PAGE + (STAND ? '?borne' : ''))}`;
   // Remise à zéro par l'équipe (ex. partie interrompue) : ouvrir la page avec ?reset
@@ -2245,6 +2527,13 @@ window.__orthoInvadersGame = function () {
   .ca-fire.down{transform:translateY(4px)}
   /* En partie : on libère un max de place pour l'écran de jeu */
   .ca.paired .ca-pad{display:none!important}
+  .ca.tv .ca-pad,.ca.tv .ca-bar > :not(#ca-pad-code){display:none!important}
+  .ca.tv .ca-tv-msg{color:#ffd319;font-size:5cqw}
+  .ca.tv .ca-bar #ca-pad-code{font-size:clamp(12px,1.6vmax,22px)}
+  html.ortho-rot90 body #capsule-arcade,html.ortho-rot270 body #capsule-arcade{inset:auto!important;top:0!important;left:0!important;
+    width:100vh!important;height:100vw!important;transform-origin:0 0}
+  html.ortho-rot90 body #capsule-arcade{transform:rotate(90deg) translateY(-100%)}
+  html.ortho-rot270 body #capsule-arcade{transform:rotate(-90deg) translateX(-100%)}
   .ca-bar .ca-padcode{color:#2de2e6}
   .ca.playing{gap:.6vh}
   .ca.playing .ca-bar{display:none}
@@ -2271,7 +2560,7 @@ window.__orthoInvadersGame = function () {
   const back = encodeURIComponent(PAGE);
 
   root.innerHTML = `
-  <div class="ca${logged ? ' logged' : ''}${STAND ? ' stand' : ''}">
+  <div class="ca${logged && !ECRAN ? ' logged' : ''}${STAND ? ' stand' : ''}${ECRAN ? ' tv' : ''}">
     <header class="ca-head"><span class="b">CAPSULE</span><span class="t">ORTHO INVADERS</span><span class="s">Défendez l'arcade dentaire !</span></header>
     <div class="ca-stage" data-fit>
       <div class="ca-screen">
@@ -2279,6 +2568,19 @@ window.__orthoInvadersGame = function () {
         <div class="ca-crt" aria-hidden="true"></div>
 
         <!-- Non connecté : accueil de la borne -->
+        <!-- Écran TV : accueil (le joueur s'inscrit et joue avec le téléphone-manette) -->
+        <div class="ca-ov" id="ca-tv" hidden><div class="ca-card">
+          <p class="ca-t big ca-blink">INSERT<br>COIN</p>
+          <p class="ca-p">Protégez l'arcade dentaire, battez la <b>Méga-Carie</b> et gagnez un <b>replay de formation</b>.</p>
+          <p class="ca-h">★ À GAGNER ★</p>
+          <div class="ca-prizes">${prizeCards}</div>
+          <p class="ca-p ca-tv-msg" id="ca-tv-msg">Prenez la manette : inscrivez-vous ou connectez-vous avec votre compte Capsule, puis jouez !</p>
+          <p class="ca-p" style="font-size:4cqw">Jeu gratuit réservé aux praticiens · une partie par compte.</p>
+        </div></div>
+        <div class="ca-ov" id="ca-tv-end" hidden><div class="ca-card">
+          <p class="ca-t" id="ca-tv-end-t"></p>
+          <p class="ca-p" id="ca-tv-end-p"></p>
+        </div></div>
         <div class="ca-ov" id="ca-coin"><div class="ca-card">
           <p class="ca-t big ca-blink">INSERT<br>COIN</p>
           <p class="ca-p">Protégez l'arcade dentaire, battez la <b>Méga-Carie</b> et gagnez un <b>replay de formation</b>.</p>
@@ -2472,7 +2774,7 @@ window.__orthoInvadersGame = function () {
     root.addEventListener('pointerdown', auto, { capture: true });
   }
 
-  const overlays = ['ca-coin', 'ca-register', 'ca-login', 'ca-start', 'ca-end', 'ca-sent', 'ca-done', 'ca-pause', 'ca-r-attract', 'ca-r-ready', 'ca-r-winner', 'ca-r-off'];
+  const overlays = ['ca-tv', 'ca-tv-end', 'ca-coin', 'ca-register', 'ca-login', 'ca-start', 'ca-end', 'ca-sent', 'ca-done', 'ca-pause', 'ca-r-attract', 'ca-r-ready', 'ca-r-winner', 'ca-r-off'];
   const PAD_STATES = { 'ca-pause': 'pause', 'ca-start': 'start', 'ca-end': 'end', 'ca-sent': 'end', 'ca-done': 'end' };
   let padState = 'coin';
   const show = (id) => {
@@ -2491,12 +2793,15 @@ window.__orthoInvadersGame = function () {
     pad = window.__orthoPad.screen({
       onInput: (s) => window.Game?.setRemote(s),
       onAction: (a) => padActions[a]?.(),
+      onMessage: (m) => padActions.message?.(m),
       onState: (t) => padStateText(t),
       onStatus: (on) => {
         ca.classList.toggle('paired', on);
         $('ca-pad-code').hidden = on; // le code n'est affiché que tant qu'aucune manette n'est reliée
         setTimeout(() => window.Game?.fit?.(), 50);
         if (on) pad.send({ t: 'st', s: padState });
+        if (on && ECRAN) pad.send({ t: 'hello', mode: 'tv' });
+        if (ECRAN) padActions.tvStatus?.(on);
       },
     });
     $('ca-pad-code').textContent = `MANETTE : CODE ${pad.code}`;
@@ -2516,6 +2821,59 @@ window.__orthoInvadersGame = function () {
     const prof = $('ca-prof').value;
     $('ca-tags').value = prof ? `${REG_TAGS}, ${prof}` : REG_TAGS;
   });
+
+  if (ECRAN && pad) { startTv(); return; }
+
+  // ── Écran TV : le téléphone-manette envoie « start » ; la TV joue puis renvoie le résultat ──
+  function startTv() {
+    let playing = false;
+    let backTimer = null;
+    let phoneState = null;
+    const TV_MSG = {
+      none: 'Prenez la manette : inscrivez-vous ou connectez-vous avec votre compte Capsule, puis jouez !',
+      guest: 'Inscrivez-vous ou connectez-vous sur la manette avec votre compte Capsule.',
+      ready: 'Joueur connecté ! Appuyez sur JOUER sur la manette.',
+      off: 'Manette non connectée : ouvrez la manette sur le téléphone du stand.',
+    };
+    const attract = () => { if (playing) return; clearTimeout(backTimer); Game.stop(); show('ca-tv'); $('ca-tv-msg').textContent = TV_MSG[phoneState || 'none']; };
+    padActions.tvStatus = (on) => { if (!on) { phoneState = 'off'; if (!playing && !$('ca-tv').hidden) $('ca-tv-msg').textContent = TV_MSG.off; } };
+    padActions.message = (m) => {
+      if (m.t === 'ps') {
+        phoneState = TV_MSG[m.s] ? m.s : 'none';
+        // Nouveau joueur sur la manette : la TV quitte l'écran de fin et revient à l'accueil.
+        if (!playing && m.s === 'guest') attract();
+        else if (!playing && !$('ca-tv').hidden) $('ca-tv-msg').textContent = TV_MSG[phoneState];
+        return;
+      }
+      if (m.t !== 'start' || playing) return;
+      playing = true;
+      clearTimeout(backTimer);
+      try { Sfx.unlock(); } catch {}
+      show(null);
+      const t0 = Date.now();
+      Game.start({
+        name: 'DOCTEUR',
+        onFeedback: (d) => pad.send({ t: 'fb', ...d }),
+        onEnd: ({ won, score, wave }) => {
+          playing = false;
+          pad.send({ t: 'end', won, score, wave, seconds: Math.round((Date.now() - t0) / 1000) });
+          show('ca-tv-end');
+          $('ca-tv-end-t').textContent = won ? '★ VICTOIRE ★' : 'GAME OVER';
+          $('ca-tv-end-p').textContent = won
+            ? `Bravo ! ${score} points. Choisissez votre replay offert sur la manette.`
+            : `${score} points. La Méga-Carie a gagné cette fois… Merci d'avoir joué !`;
+          backTimer = setTimeout(attract, won ? 60000 : 12000);
+        },
+      });
+    };
+    padActions.fire = () => { if (Game.paused) { show(null); Game.paused = false; } };
+    padActions.pause = () => { if (Game.paused) { show(null); Game.paused = false; } else if (playing) { Game.paused = true; if (Game.paused) show('ca-pause'); } };
+    // Le son des TV ne démarre qu'après une touche de la télécommande (OK) ou un clic.
+    const unlock = () => { try { Sfx.unlock(); } catch {} };
+    root.addEventListener('pointerdown', unlock);
+    addEventListener('keydown', unlock);
+    attract();
+  }
 
   // ── Borne : connexion et inscription envoyées en arrière-plan, sans jamais quitter l'écran du jeu ──
   // Une erreur Shopify (mauvais mot de passe, email déjà inscrit) afficherait sinon sa propre page.

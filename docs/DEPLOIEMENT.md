@@ -98,3 +98,26 @@ Mécanisme : fonction Edge Supabase `ortho-jeu-tag` (projet capsule, source dans
 qui utilise le jeton Admin Shopify déjà configuré (`SHOPIFY_ADMIN_TOKEN`, besoin du droit `write_customers`).
 Suivi : table `ortho_jeu_joueurs` (statut nouveau/existant, visites, éventuelle erreur).
 Retrouver les joueurs : Shopify › Clients › filtre « Tag » = `jeuJO`.
+
+---
+
+# Grand écran TV du stand (TV connectée seule) + téléphone-manette
+
+La TV n'affiche que le jeu ; **tout le parcours du joueur se fait sur le téléphone du stand** :
+inscription ou connexion Capsule, une partie par compte, manette, choix du replay en cas de victoire, déconnexion.
+
+1. **TV** : ouvrir le navigateur de la TV sur `https://capsule-med.com/pages/ortho-invaders?ecran`.
+   - TV posée **à la verticale** : ajouter `&rotation=90` (ou `&rotation=270` si l'image est à l'envers).
+     Le réglage est mémorisé ; `?ecran&rotation=0` l'annule.
+   - En bas de l'écran : `MANETTE : CODE XXXXX · PRÊTE`.
+   - Appuyer une fois sur **OK** de la télécommande pour autoriser le son.
+2. **Téléphone du stand** : `https://capsule-med.com/pages/ortho-invaders?manette=XXXXX` (code de la TV), puis l'ajouter à l'écran d'accueil.
+3. Déroulé : le praticien s'inscrit (tags `jeuJO`, `jeuJO-2026`, `jeuJO-inscrit`, `BorneJo2026`, profession) ou se connecte
+   sur le téléphone → **JOUER** → il joue en regardant la TV → résultat sur le téléphone (gain à valider si victoire)
+   → déconnexion automatique → la TV revient à l'accueil pour le joueur suivant.
+4. Réseau : TV et téléphone sur **le même réseau à vous** (mini-routeur 4G ou partage de connexion du téléphone),
+   jamais sur un Wi-Fi de salon qui isole les appareils.
+
+À tester avant l'événement : tous les navigateurs de TV ne gèrent pas la liaison directe (WebRTC). Si le bas de l'écran
+affiche `NAVIGATEUR INCOMPATIBLE` ou reste sur `CONNEXION…`, brancher un ordinateur portable ou une clé (Fire TV Stick…)
+en HDMI et ouvrir la même adresse dans Chrome.
