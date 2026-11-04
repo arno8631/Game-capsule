@@ -34,9 +34,12 @@
   // Fonction de tag (Supabase capsule) : appelée sans clé, elle fait ses propres contrôles
   // (origine capsule-med.com, identifiant numérique, tags jeuJO uniquement).
   const TAG_URL = 'https://qyibpvgbxxdilaewiyys.supabase.co/functions/v1/ortho-jeu-tag';
+  // Comptes créés depuis la borne du stand (?borne) : tag dédié en plus des tags jeuJO.
+  const BORNE_TAG = 'BorneJo2026';
+  const REG_TAGS = ['jeuJO', 'jeuJO-2026', 'jeuJO-inscrit', ...(STAND ? [BORNE_TAG] : [])].join(', ');
   const RULES = root.dataset.rules || '/pages/reglements-jeux-jo-2025';
   const REWARDS = [
-    // price : valeur de secours en € ; le prix réel est relu sur la fiche produit au chargement.
+    // price : valeur de secours en € ; le prix réel est relu sur la fiche produit au chargement (url = fiche, jamais affichée).
     { id: 'biomecanique', speaker: 'Dr Skander Ellouze', title: 'Replay Biomécanique : maîtriser les clés de l’excellence en orthodontie',
       url: '/products/replay-biomecanique-maitriser-les-cles-de-lexcellence-en-orthodontie', price: 900 },
     { id: 'contentions', speaker: 'Dr Philippides', title: 'Replay Adieu les urgences : maîtriser le collage des contentions',
@@ -112,7 +115,8 @@
   .ca-btn:focus-visible,.ca-rw:focus-visible,.ca-link:focus-visible{outline:3px solid var(--c);outline-offset:3px}
   .ca-prizes{display:grid;gap:2.4cqw}
   .ca-prize{display:grid;gap:1cqw;text-align:left;border:2px solid var(--m);background:rgba(18,6,46,.9);padding:2.6cqw 3cqw}
-  #capsule-arcade .ca-prize a.l{font-family:'Press Start 2P',monospace;font-size:2.2cqw;line-height:1.6;color:var(--c);text-decoration:underline;text-underline-offset:.3em;justify-self:start}
+  #capsule-arcade .ca-err{color:#ff7ba3;font-size:4.2cqw;line-height:1.05;margin:0}
+  .ca.stand .ca-nostand{display:none!important}
   .ca-prize .w,.ca-rw .w{font-family:'Press Start 2P',monospace;font-size:2.5cqw;color:var(--y);line-height:1.5}
   .ca-prize .t,.ca-rw .t{font-size:4.2cqw;line-height:1}
   .ca-rw{font:inherit;color:var(--ink);background:var(--bg);border:3px solid var(--m);padding:3cqw;cursor:pointer;text-align:left;display:grid;gap:1.4cqw}
@@ -153,12 +157,11 @@
   style.textContent = css;
   document.head.appendChild(style);
 
-  // Lot : conférencier et prix du replay, titre, lien vers la fiche formation sur capsule (nouvel onglet).
+  // Lot : conférencier et prix du replay, puis titre. Aucun lien : la borne ne laisse pas sortir du jeu.
   const euros = (n) => `${Number(n).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} €`;
   const prizeCards = REWARDS.map((r) => `<div class="ca-prize">
     <span class="w">${esc(r.speaker.toUpperCase())} · <span data-price="${r.id}">${euros(r.price)}</span> OFFERT</span>
-    <span class="t">${esc(r.title)}</span>
-    <a class="l" href="${esc(r.url)}" target="_blank" rel="noopener">VOIR LA FORMATION SUR CAPSULE ›</a></div>`).join('');
+    <span class="t">${esc(r.title)}</span></div>`).join('');
   const back = encodeURIComponent(PAGE);
 
   root.innerHTML = `
@@ -183,10 +186,11 @@
         <!-- Inscription : formulaire natif Shopify (comptes classiques) -->
         <div class="ca-ov top" id="ca-register" hidden><div class="ca-card">
           <p class="ca-t">NOUVEAU<br>JOUEUR</p>
+          <p class="ca-err" id="ca-reg-err" hidden></p>
           <form class="ca-f" method="post" action="/account" accept-charset="UTF-8" id="ca-reg-form">
             <input type="hidden" name="form_type" value="create_customer">
             <input type="hidden" name="utf8" value="✓">
-            <input type="hidden" name="customer[tags]" id="ca-tags" value="jeuJO, jeuJO-2026, jeuJO-inscrit">
+            <input type="hidden" name="customer[tags]" id="ca-tags" value="${REG_TAGS}">
             <input type="hidden" name="return_to" value="${esc(PAGE)}">
             <div class="row">
               <label>PRÉNOM<input name="customer[first_name]" autocomplete="given-name" required></label>
@@ -215,7 +219,8 @@
         <div class="ca-ov" id="ca-login" hidden><div class="ca-card">
           <p class="ca-t">CONNEXION</p>
           <p class="ca-p">Utilisez votre compte Capsule habituel.</p>
-          <form class="ca-f" method="post" action="/account/login" accept-charset="UTF-8">
+          <p class="ca-err" id="ca-login-err" hidden></p>
+          <form class="ca-f" method="post" action="/account/login" accept-charset="UTF-8" id="ca-login-form">
             <input type="hidden" name="form_type" value="customer_login">
             <input type="hidden" name="utf8" value="✓">
             <input type="hidden" name="return_url" value="${esc(PAGE)}">
@@ -223,7 +228,8 @@
             <label>MOT DE PASSE<input type="password" name="customer[password]" autocomplete="current-password" required></label>
             <button class="ca-btn alt" type="submit">▶ Me connecter et jouer</button>
           </form>
-          <a class="ca-link" href="/account/login#recover">Mot de passe oublié ?</a>
+          <a class="ca-link ca-nostand" href="/account/login#recover">Mot de passe oublié ?</a>
+          <p class="ca-p" ${STAND ? '' : 'hidden'}>Mot de passe oublié ? Demandez à l'équipe Capsule du stand.</p>
           <button type="button" class="ca-link" data-go="ca-register">Créer un compte</button>
           <button type="button" class="ca-link" data-go="ca-coin">◀ Retour</button>
         </div></div>
@@ -310,7 +316,7 @@
       <span class="ca-keys">← → BOUGER · ESPACE TIRER · P PAUSE</span>
       <button type="button" class="ca-fs" id="ca-fs" hidden>⛶ PLEIN ÉCRAN</button>
       ${logged ? `<a href="/account/logout?return_url=${encodeURIComponent(PAGE + (STAND ? '?borne' : ''))}">▶ JOUEUR SUIVANT (DÉCONNEXION)</a>` : ''}
-      <a href="${esc(RULES)}" target="_blank" rel="noopener">RÈGLEMENT</a>
+      ${STAND ? '<span>RÈGLEMENT SUR CAPSULE-MED.COM</span>' : `<a href="${esc(RULES)}" target="_blank" rel="noopener">RÈGLEMENT</a>`}
       <a class="ca-site" href="/">CAPSULE-MED.COM</a>
     </div>
   </div>`;
@@ -402,8 +408,43 @@
   // La profession devient un tag client (segmentation Shopify)
   $('ca-reg-form').addEventListener('submit', () => {
     const prof = $('ca-prof').value;
-    if (prof) $('ca-tags').value = `jeuJO, jeuJO-2026, jeuJO-inscrit, ${prof}`;
+    $('ca-tags').value = prof ? `${REG_TAGS}, ${prof}` : REG_TAGS;
   });
+
+  // ── Borne : connexion et inscription envoyées en arrière-plan, sans jamais quitter l'écran du jeu ──
+  // Une erreur Shopify (mauvais mot de passe, email déjà inscrit) afficherait sinon sa propre page.
+  // Seule exception : la vérification anti-robot de Shopify, qui revient ensuite à la borne.
+  const AUTH_KEY = 'orthoAuthPending';
+  if (STAND) {
+    let pending = null;
+    try { pending = sessionStorage.getItem(AUTH_KEY); sessionStorage.removeItem(AUTH_KEY); } catch {}
+    if (pending && !logged) {
+      const reg = pending === 'register';
+      setTimeout(() => {
+        show(reg ? 'ca-register' : 'ca-login');
+        const err = $(reg ? 'ca-reg-err' : 'ca-login-err');
+        err.textContent = reg
+          ? 'Compte non créé : cette adresse a peut-être déjà un compte Capsule (touchez « J’ai déjà un compte »), ou le mot de passe est trop court.'
+          : 'Connexion refusée : vérifiez l’email et le mot de passe.';
+        err.hidden = false;
+      });
+    }
+    const viaFetch = (form, kind) => form.addEventListener('submit', async (e) => {
+      if (e.defaultPrevented) return;
+      e.preventDefault();
+      const btn = form.querySelector('[type=submit]');
+      btn.disabled = true;
+      try { sessionStorage.setItem(AUTH_KEY, kind); } catch {}
+      try {
+        const res = await fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin' });
+        if (/\/challenge/.test(res.url)) { try { sessionStorage.removeItem(AUTH_KEY); } catch {} form.submit(); return; }
+      } catch {}
+      // Rechargement de la borne : connecté → on joue ; sinon le message d'erreur s'affiche dans la borne.
+      location.replace(`${PAGE}?borne`);
+    });
+    viaFetch($('ca-login-form'), 'login');
+    viaFetch($('ca-reg-form'), 'register');
+  }
 
   if (REMOTE) { startRemote(); return; }
 
