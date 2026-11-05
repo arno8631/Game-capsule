@@ -2362,7 +2362,7 @@ window.__orthoInvadersGame = function () {
         const btn = form.querySelector('[type=submit]');
         btn.disabled = true;
         const r = await auth.send(form);
-        if (r.ok) { location.replace(HOME); return; }
+        if (r.ok) { try { sessionStorage.setItem('orthoPadAutoPlay', '1'); } catch {} location.replace(HOME); return; }
         btn.disabled = false;
         const bad = auth.show(form, kind, r);
         bad?.scrollIntoView?.({ block: 'center' });
@@ -2438,8 +2438,12 @@ window.__orthoInvadersGame = function () {
         helloSeen = true;
         if (!tvMode) {
           tvMode = true;
+          let auto = false;
+          try { auto = sessionStorage.getItem('orthoPadAutoPlay') === '1'; sessionStorage.removeItem('orthoPadAutoPlay'); } catch {}
           if (!logged) go('guest');
-          else go(!tester && store.get(PLAYED_KEY) ? 'played' : 'ready');
+          else if (!tester && store.get(PLAYED_KEY)) go('played');
+          else if (auto) { go('ready'); play(); } // vient de se connecter : la partie démarre aussitôt
+          else go('ready');
         } else if (view) { send({ t: 'ps', s: PS[view] || view }); syncReady(); }
         return;
       }
@@ -2471,10 +2475,10 @@ window.__orthoInvadersGame = function () {
   // directement dans <body>, au-dessus de tout ; le reste du site est masqué (voir CSS).
   document.body.appendChild(root);
   document.documentElement.classList.add('ortho-borne');
-  const customerId = root.dataset.customerId
+  let customerId = root.dataset.customerId
     || window.ShopifyAnalytics?.meta?.page?.customerId
     || window.__st?.cid;
-  const logged = Boolean(customerId);
+  let logged = Boolean(customerId);
 
   const PAGE = location.pathname;
   // Mode stand (tablette de la borne) : ?borne dans l'adresse → plein écran au premier toucher,
@@ -2509,9 +2513,19 @@ window.__orthoInvadersGame = function () {
   const REG_TAGS = ['jeuJO', 'jeuJO-2026', 'jeuJO-inscrit', ...(STAND ? [BORNE_TAG] : [])].join(', ');
   const RULES = root.dataset.rules || '/pages/reglements-jeux-jo-2025';
   const REWARDS = window.__orthoConfig.REWARDS;
-  const WON_KEY = `orthoInvadersWon:${customerId}`;
-  const PLAYED_KEY = `orthoInvadersPlayed:${customerId}`; // une seule partie par participant
-  const TESTER = logged && TESTERS.includes(String(customerId));
+  let WON_KEY = `orthoInvadersWon:${customerId}`;
+  let PLAYED_KEY = `orthoInvadersPlayed:${customerId}`; // une seule partie par participant
+  let TESTER = logged && TESTERS.includes(String(customerId));
+  // Connexion réussie dans la borne : on adopte le compte sans recharger la page (plein écran conservé).
+  function setCustomer(id) {
+    customerId = String(id);
+    logged = true;
+    WON_KEY = `orthoInvadersWon:${customerId}`;
+    PLAYED_KEY = `orthoInvadersPlayed:${customerId}`;
+    TESTER = TESTERS.includes(customerId);
+    root.querySelector('.ca').classList.add('logged');
+  }
+  const AUTOPLAY_KEY = 'orthoAutoPlay';
   const LOGOUT_URL = `/account/logout?return_url=${encodeURIComponent(PAGE + (STAND ? '?borne' : ''))}`;
   // Remise à zéro par l'équipe (ex. partie interrompue) : ouvrir la page avec ?reset
   if (new URLSearchParams(location.search).has('reset')) {
@@ -3088,8 +3102,19 @@ window.__orthoInvadersGame = function () {
       const btn = form.querySelector('[type=submit]');
       btn.disabled = true;
       const r = await window.__orthoAuth.send(form);
-      // Connecté : la borne se recharge et la partie peut commencer.
-      if (r.ok) { location.replace(`${PAGE}?borne`); return; }
+      // Connecté : on lance directement la partie, sans changer de page.
+      if (r.ok) {
+        let id = null;
+        try {
+          const html = await (await fetch(`${PAGE}?borne&t=${Date.now()}`, { credentials: 'same-origin', cache: 'no-store' })).text();
+          id = (html.match(/customerId["']?\s*:\s*["']?(\d{3,})/) || html.match(/["']cid["']\s*:\s*["']?(\d{3,})/) || [])[1] || null;
+        } catch {}
+        if (id) { setCustomer(id); loggedInit(true); return; }
+        // Identifiant introuvable : rechargement, la partie démarre dès l'arrivée.
+        try { sessionStorage.setItem(AUTOPLAY_KEY, '1'); } catch {}
+        location.replace(`${PAGE}?borne`);
+        return;
+      }
       // Erreur : le formulaire reste rempli, seule la ligne à corriger est signalée.
       btn.disabled = false;
       const bad = window.__orthoAuth.show(form, kind, r);
@@ -3193,29 +3218,37 @@ window.__orthoInvadersGame = function () {
     root.addEventListener('pointerdown', () => { try { Sfx.unlock(); } catch {} }, { once: true });
   }
 
-  // ── Tag Shopify de chaque praticien connecté à la borne (nouvel inscrit ou compte existant) ──
-  // Fonction Edge Supabase capsule « ortho-jeu-tag » : ajoute jeuJO, jeuJO-2026 et
-  // jeuJO-inscrit / jeuJO-compte-existant. Une fois par session d'onglet et par compte.
-  // Comptes de test capsule exclus : ils ne faussent pas les statistiques jeuJO.
-  if (logged && !TESTER) {
-    const TAGGED_KEY = `orthoTagged:${customerId}`;
-    let done = false;
-    try { done = sessionStorage.getItem(TAGGED_KEY) === '1'; } catch {}
-    if (!done) {
-      fetch(TAG_URL, {
-        method: 'POST',
-        keepalive: true,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customer_id: String(customerId) }),
-      }).then((r) => { if (r.ok) { try { sessionStorage.setItem(TAGGED_KEY, '1'); } catch {} } }).catch(() => {});
-    }
-  }
-
   if (!logged) {
     const hash = location.hash.replace('#', '');
     show(hash === 'inscription' ? 'ca-register' : hash === 'connexion' ? 'ca-login' : 'ca-coin');
-    return;
+  } else {
+    let auto = false;
+    try { auto = sessionStorage.getItem(AUTOPLAY_KEY) === '1'; sessionStorage.removeItem(AUTOPLAY_KEY); } catch {}
+    loggedInit(STAND || auto);
   }
+  // Le son se débloque au premier toucher sur la borne.
+  if (STAND) root.addEventListener('pointerdown', () => { try { Sfx.unlock(); } catch {} });
+
+  // ── Joueur connecté : partie unique, fin de partie, gain, déconnexion ──
+  function loggedInit(autoplay) {
+    // ── Tag Shopify de chaque praticien connecté à la borne (nouvel inscrit ou compte existant) ──
+    // Fonction Edge Supabase capsule « ortho-jeu-tag » : ajoute jeuJO, jeuJO-2026 et
+    // jeuJO-inscrit / jeuJO-compte-existant. Une fois par session d'onglet et par compte.
+    // Comptes de test capsule exclus : ils ne faussent pas les statistiques jeuJO.
+    if (logged && !TESTER) {
+      const TAGGED_KEY = `orthoTagged:${customerId}`;
+      let done = false;
+      try { done = sessionStorage.getItem(TAGGED_KEY) === '1'; } catch {}
+      if (!done) {
+        fetch(TAG_URL, {
+          method: 'POST',
+          keepalive: true,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customer_id: String(customerId) }),
+        }).then((r) => { if (r.ok) { try { sessionStorage.setItem(TAGGED_KEY, '1'); } catch {} } }).catch(() => {});
+      }
+    }
+
 
   let startedAt = 0;
   let last = null;
@@ -3251,6 +3284,8 @@ window.__orthoInvadersGame = function () {
   } else if (store.get(PLAYED_KEY) && !TESTER) {
     show('ca-done');
     logoutIn(10, 'ca-done-count', 'Déconnexion automatique');
+  } else if (autoplay) {
+    play(); // borne : le joueur vient de se connecter, la partie démarre aussitôt
   } else {
     show('ca-start');
   }
@@ -3369,4 +3404,5 @@ window.__orthoInvadersGame = function () {
   fire.addEventListener('pointerdown', (e) => { e.preventDefault(); fire.setPointerCapture?.(e.pointerId); st.fire = true; fire.classList.add('down'); sync(); });
   for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) fire.addEventListener(ev, () => { st.fire = false; fire.classList.remove('down'); sync(); });
   root.addEventListener('contextmenu', (e) => { if (e.target.closest('.ca-pad')) e.preventDefault(); });
+  }
 })();

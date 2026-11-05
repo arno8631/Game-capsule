@@ -594,7 +594,7 @@
         const btn = form.querySelector('[type=submit]');
         btn.disabled = true;
         const r = await auth.send(form);
-        if (r.ok) { location.replace(HOME); return; }
+        if (r.ok) { try { sessionStorage.setItem('orthoPadAutoPlay', '1'); } catch {} location.replace(HOME); return; }
         btn.disabled = false;
         const bad = auth.show(form, kind, r);
         bad?.scrollIntoView?.({ block: 'center' });
@@ -670,8 +670,12 @@
         helloSeen = true;
         if (!tvMode) {
           tvMode = true;
+          let auto = false;
+          try { auto = sessionStorage.getItem('orthoPadAutoPlay') === '1'; sessionStorage.removeItem('orthoPadAutoPlay'); } catch {}
           if (!logged) go('guest');
-          else go(!tester && store.get(PLAYED_KEY) ? 'played' : 'ready');
+          else if (!tester && store.get(PLAYED_KEY)) go('played');
+          else if (auto) { go('ready'); play(); } // vient de se connecter : la partie démarre aussitôt
+          else go('ready');
         } else if (view) { send({ t: 'ps', s: PS[view] || view }); syncReady(); }
         return;
       }
