@@ -1810,9 +1810,59 @@ window.__orthoInvadersGame = function () {
   // ── Connexion / inscription Shopify en arrière-plan (borne et manette) ──
   // Le formulaire n'est jamais vidé : en cas d'erreur, seule la ligne à corriger est signalée.
   const auth = {
+    // Rend un formulaire invisible aux scripts du thème Shopify (connexion « AJAX » qui redirige vers
+    // « Mon compte ») : plus d'adresse ni de type de formulaire Shopify dans la page, seul notre envoi compte.
+    shield(form) {
+      if (!form || form.dataset.action) return form;
+      form.dataset.action = form.getAttribute('action') || '';
+      form.removeAttribute('action');
+      const ft = form.querySelector('[name="form_type"]');
+      if (ft) { form.dataset.formType = ft.value; ft.remove(); }
+      return form;
+    },
+    // Envoi Shopify en arrière-plan ; on bloque aussi la propagation vers les scripts du thème.
+    post(form) {
+      const fd = new FormData(form);
+      if (form.dataset.formType) fd.set('form_type', form.dataset.formType);
+      return fetch(form.dataset.action || form.getAttribute('action'), { method: 'POST', body: fd, credentials: 'same-origin' });
+    },
+    guard(e) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); },
+    // Envoie l'email Shopify « définir mon mot de passe » (oubli, ou compte créé avec Google).
+    async recover(email) {
+      const fd = new FormData();
+      fd.set('form_type', 'recover_customer_password');
+      fd.set('utf8', '✓');
+      fd.set('email', email);
+      try {
+        const res = await fetch('/account/recover', { method: 'POST', body: fd, credentials: 'same-origin' });
+        if (/\/challenge/.test(new URL(res.url, location.href).pathname)) return 'challenge';
+        return res.ok || res.redirected ? 'sent' : 'error';
+      } catch { return 'error'; }
+    },
+    // Bouton « Mot de passe oublié ou compte Google ? » branché sur le champ email du formulaire.
+    bindRecover(btn, form) {
+      btn.addEventListener('click', async () => {
+        const input = form.querySelector('[name="customer[email]"]');
+        auth.clear(form);
+        auth.show(form, 'none', { errors: [] });
+        const email = input.value.trim();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { auth.mark(form, '[name="customer[email]"]', 'Saisissez d’abord votre email ci-dessus, puis touchez à nouveau ce bouton.'); input.focus(); return; }
+        btn.disabled = true;
+        const r = await auth.recover(email);
+        btn.disabled = false;
+        const msg = r === 'sent'
+          ? `Email envoyé à ${email} : ouvrez-le sur votre téléphone, choisissez votre mot de passe, puis connectez-vous ici.`
+          : r === 'challenge' ? 'Shopify demande une vérification anti-robot : appelez l’équipe Capsule du stand.'
+            : 'Envoi impossible pour le moment : réessayez ou appelez l’équipe Capsule du stand.';
+        const m = document.createElement('span');
+        m.className = 'oa-msg oa-ok';
+        m.textContent = msg;
+        btn.insertAdjacentElement('afterend', m);
+      });
+    },
     async send(form) {
       let res;
-      try { res = await fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin' }); }
+      try { res = await auth.post(form); }
       catch { return { ok: false, network: true, errors: [] }; }
       const path = new URL(res.url, location.href).pathname;
       if (/\/challenge/.test(path)) return { challenge: true };
@@ -1853,16 +1903,18 @@ window.__orthoInvadersGame = function () {
         const st = document.createElement('style');
         st.id = 'oa-style';
         st.textContent = `.oa-bad{border-color:#ff2a6d!important;box-shadow:0 0 0 2px #ff2a6d!important}
-          .oa-msg{display:block;font-family:'VT323',ui-monospace,monospace;font-size:1.7em;line-height:1;letter-spacing:0;color:#ff7ba3;text-transform:none}`;
+          .oa-msg{display:block;font-family:'VT323',ui-monospace,monospace;font-size:1.7em;line-height:1;letter-spacing:0;color:#ff7ba3;text-transform:none}
+          .oa-msg.oa-ok{color:#7dff5c;font-size:1.25em;margin-top:.4em}`;
         document.head.appendChild(st);
       }
       const submit = form.querySelector('[type=submit]');
       if (result.challenge) return auth.mark(form, '[type=submit]', 'Shopify demande une vérification anti-robot : appelez l’équipe Capsule du stand.') && submit;
       if (result.network) return auth.mark(form, '[type=submit]', 'Pas de connexion Internet : réessayez dans un instant.') && submit;
       const EMAIL = '[name="customer[email]"]', PASS = '[name="customer[password]"]';
+      if (kind === 'none') return null;
       if (kind === 'login') {
         auth.mark(form, EMAIL, '');
-        return auth.mark(form, PASS, 'Email ou mot de passe incorrect : vérifiez ces deux lignes.');
+        return auth.mark(form, PASS, 'Email ou mot de passe incorrect. Compte créé avec Google ou mot de passe oublié ? Touchez le bouton juste en dessous.');
       }
       const txt = result.errors.join(' ').toLowerCase();
       let first = null;
@@ -2310,7 +2362,7 @@ window.__orthoInvadersGame = function () {
           <label>MOT DE PASSE<input type="password" name="customer[password]" id="mp-lpw" autocomplete="current-password" required></label>
           <button class="mp-btn alt" type="submit">▶ Me connecter</button>
         </form>
-        <p class="mp-p" style="font-size:18px">Mot de passe oublié ? Demandez à l'équipe Capsule du stand.</p>
+        <button type="button" class="mp-link" id="mp-recover">Mot de passe oublié ou compte Google ?</button>
         <button type="button" class="mp-link" data-go="register">Créer un compte</button>
         <button type="button" class="mp-link" data-go="guest">◀ Retour</button>`,
       ready: () => `<p class="mp-h">✓ CONNECTÉ</p>
@@ -2344,6 +2396,7 @@ window.__orthoInvadersGame = function () {
       acc.querySelectorAll('[data-act="logout"]').forEach((b) => b.addEventListener('click', logout));
       acc.querySelectorAll('[data-act="replay"]').forEach((b) => b.addEventListener('click', () => go('ready')));
       if (v === 'register' || v === 'login') bindAuth(v);
+      if (v === 'login') auth.bindRecover($('mp-recover'), $('mp-login'));
       if (v === 'ready') { $('mp-play').addEventListener('click', play); syncReady(); }
       if (v === 'played') countTo(10, 'Déconnexion automatique');
       if (v === 'lose') countTo(12, 'Joueur suivant');
@@ -2361,10 +2414,11 @@ window.__orthoInvadersGame = function () {
     function bindAuth(kind) {
       const form = acc.querySelector('form');
       // Téléphone partagé du stand : champs toujours vides, sans auto-remplissage du navigateur.
+      auth.shield(form);
       form.setAttribute('autocomplete', 'off');
       form.querySelectorAll('input:not([type=hidden]):not([type=checkbox])').forEach((i) => i.setAttribute('autocomplete', i.type === 'password' ? 'new-password' : 'off'));
       form.addEventListener('submit', async (e) => {
-        e.preventDefault();
+        auth.guard(e);
         if (kind === 'register') { const prof = $('mp-prof').value; $('mp-tags').value = prof ? `${REG_TAGS}, ${prof}` : REG_TAGS; }
         const btn = form.querySelector('[type=submit]');
         btn.disabled = true;
@@ -2396,9 +2450,9 @@ window.__orthoInvadersGame = function () {
         acc.querySelectorAll('[data-rw]').forEach((x) => x.classList.toggle('on', x === b));
         $('mp-send').disabled = false;
       }));
-      const form = $('mp-win');
+      const form = auth.shield($('mp-win'));
       form.addEventListener('submit', async (e) => {
-        e.preventDefault();
+        auth.guard(e);
         if (!reward) return;
         const when = new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
         $('mp-body').value = [
@@ -2417,7 +2471,7 @@ window.__orthoInvadersGame = function () {
         $('mp-send').disabled = true;
         if (!tester) store.set(`orthoInvadersWon:${cid}`, reward.id);
         try {
-          const res = await fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin' });
+          const res = await auth.post(form);
           if (/\/challenge/.test(new URL(res.url, location.href).pathname)) throw new Error('challenge');
           result.reward = reward;
           go('thanks');
@@ -2490,9 +2544,13 @@ window.__orthoInvadersGame = function () {
   const PAGE = location.pathname;
   // Mode stand (tablette de la borne) : ?borne dans l'adresse → plein écran au premier toucher,
   // et on revient en mode stand après chaque déconnexion « Joueur suivant ».
-  const STAND = new URLSearchParams(location.search).has('borne') || new URLSearchParams(location.search).has('ecran')
-    || (() => { try { return sessionStorage.getItem('orthoStand') === '1' || sessionStorage.getItem('orthoEcran') === '1'; } catch { return false; } })();
-  if (STAND) { try { sessionStorage.setItem('orthoStand', '1'); } catch {} }
+  // Mémorisé sur l'appareil (localStorage) : la borne reste une borne même si « ?borne » disparaît de
+  // l'adresse. ?site remet l'appareil en mode site normal.
+  const qsMode = new URLSearchParams(location.search);
+  try { if (qsMode.has('site')) { localStorage.removeItem('orthoStandDevice'); sessionStorage.removeItem('orthoStand'); sessionStorage.removeItem('orthoEcran'); } } catch {}
+  const STAND = qsMode.has('borne') || qsMode.has('ecran')
+    || (() => { try { return localStorage.getItem('orthoStandDevice') === '1' || sessionStorage.getItem('orthoStand') === '1' || sessionStorage.getItem('orthoEcran') === '1'; } catch { return false; } })();
+  if (STAND) { try { sessionStorage.setItem('orthoStand', '1'); localStorage.setItem('orthoStandDevice', '1'); } catch {} }
   // Mode écran (grande TV du stand) : ?ecran → la TV n'affiche que le jeu ; inscription, connexion,
   // partie et gain se font sur le téléphone-manette. ?ecran&rotation=90 (ou 270) pour une TV posée
   // à la verticale (les navigateurs de TV ne tournent pas l'image). ?ecran&rotation=0 pour annuler.
@@ -2711,7 +2769,7 @@ window.__orthoInvadersGame = function () {
             <input type="hidden" name="form_type" value="create_customer">
             <input type="hidden" name="utf8" value="✓">
             <input type="hidden" name="customer[tags]" id="ca-tags" value="${REG_TAGS}">
-            <input type="hidden" name="return_to" value="${esc(PAGE)}">
+            <input type="hidden" name="return_to" value="${esc(STAND ? `${PAGE}?borne` : PAGE)}">
             <div class="row">
               <label>PRÉNOM<input name="customer[first_name]" autocomplete="given-name" required></label>
               <label>NOM<input name="customer[last_name]" autocomplete="family-name" required></label>
@@ -2743,13 +2801,12 @@ window.__orthoInvadersGame = function () {
           <form class="ca-f" method="post" action="/account/login" accept-charset="UTF-8" id="ca-login-form">
             <input type="hidden" name="form_type" value="customer_login">
             <input type="hidden" name="utf8" value="✓">
-            <input type="hidden" name="return_url" value="${esc(PAGE)}">
+            <input type="hidden" name="return_url" value="${esc(STAND ? `${PAGE}?borne` : PAGE)}">
             <label>EMAIL<input type="email" name="customer[email]" autocomplete="email" required></label>
             <label>MOT DE PASSE<input type="password" name="customer[password]" autocomplete="current-password" required></label>
             <button class="ca-btn alt" type="submit">▶ Me connecter et jouer</button>
           </form>
-          <a class="ca-link ca-nostand" href="/account/login#recover">Mot de passe oublié ?</a>
-          <p class="ca-p" ${STAND ? '' : 'hidden'}>Mot de passe oublié ? Demandez à l'équipe Capsule du stand.</p>
+          <button type="button" class="ca-link" id="ca-recover">Mot de passe oublié ou compte Google ?</button>
           <button type="button" class="ca-link" data-go="ca-register">Créer un compte</button>
           <button type="button" class="ca-link" data-go="ca-coin">◀ Retour</button>
         </div></div>
@@ -3099,13 +3156,14 @@ window.__orthoInvadersGame = function () {
     attract();
   }
 
-  // ── Borne : connexion et inscription envoyées en arrière-plan, sans jamais quitter l'écran du jeu ──
-  // Une erreur Shopify (mauvais mot de passe, email déjà inscrit) afficherait sinon sa propre page.
-  // Seule exception : la vérification anti-robot de Shopify, qui revient ensuite à la borne.
-  if (STAND) {
+  // ── Connexion et inscription envoyées en arrière-plan, sans jamais quitter l'écran du jeu ──
+  // (borne et site) : une erreur Shopify (mauvais mot de passe, email déjà inscrit) afficherait
+  // sinon sa propre page de connexion. La vérification anti-robot est signalée dans le jeu.
+  {
+    // Formulaires de la borne cachés aux scripts du thème (sinon : redirection vers « Mon compte »).
+    ['ca-login-form', 'ca-reg-form', 'ca-win'].forEach((id) => window.__orthoAuth.shield($(id)));
     const viaFetch = (form, kind) => form.addEventListener('submit', async (e) => {
-      if (e.defaultPrevented) return;
-      e.preventDefault();
+      window.__orthoAuth.guard(e);
       const btn = form.querySelector('[type=submit]');
       btn.disabled = true;
       const r = await window.__orthoAuth.send(form);
@@ -3119,7 +3177,7 @@ window.__orthoInvadersGame = function () {
         if (id) { setCustomer(id); loggedInit(true); return; }
         // Identifiant introuvable : rechargement, la partie démarre dès l'arrivée.
         try { sessionStorage.setItem(AUTOPLAY_KEY, '1'); } catch {}
-        location.replace(`${PAGE}?borne`);
+        location.replace(STAND ? `${PAGE}?borne` : PAGE);
         return;
       }
       // Erreur : le formulaire reste rempli, seule la ligne à corriger est signalée.
@@ -3129,6 +3187,7 @@ window.__orthoInvadersGame = function () {
       bad?.focus?.();
     });
     viaFetch($('ca-login-form'), 'login');
+    window.__orthoAuth.bindRecover($('ca-recover'), $('ca-login-form'));
     viaFetch($('ca-reg-form'), 'register');
     // Borne partagée : jamais de données du joueur précédent. Pas d'auto-remplissage du navigateur,
     // formulaires vidés à chaque changement d'écran et à chaque (re)chargement de la page.
@@ -3263,14 +3322,13 @@ window.__orthoInvadersGame = function () {
 
   // ── Une partie par participant, puis déconnexion pour le joueur suivant ──
   root.querySelectorAll('#ca-next, .ca-next').forEach((a) => { a.href = LOGOUT_URL; });
-  if (STAND) root.querySelectorAll('#ca-next, .ca-next, .ca-bar a[href*="logout"]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); leave(); }));
+  root.querySelectorAll('#ca-next, .ca-next, .ca-bar a[href*="logout"]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); leave(); }));
   let countdown = null;
   // Joueur suivant : en borne, déconnexion en arrière-plan puis retour direct à l'accueil de la borne
   // (jamais de page du site). Ailleurs, déconnexion classique Shopify.
   function leave() {
     clearInterval(countdown);
-    if (!STAND) { location.href = LOGOUT_URL; return; }
-    fetch('/account/logout', { credentials: 'same-origin' }).catch(() => {}).finally(() => location.replace(`${PAGE}?borne`));
+    fetch('/account/logout', { credentials: 'same-origin' }).catch(() => {}).finally(() => location.replace(STAND ? `${PAGE}?borne` : PAGE));
   }
   function logoutIn(seconds, elId, label) {
     clearInterval(countdown);
@@ -3355,11 +3413,10 @@ window.__orthoInvadersGame = function () {
     if (!TESTER) store.set(WON_KEY, reward.id);
     else store.set(`orthoInvadersTestSent`, '1');
     clearInterval(countdown);
-    if (!STAND) return; // site : envoi classique du formulaire de contact
     // Borne : envoi en arrière-plan, on reste dans le jeu.
-    e.preventDefault();
+    window.__orthoAuth.guard(e);
     $('ca-send').disabled = true;
-    fetch($('ca-win').action, { method: 'POST', body: new FormData($('ca-win')), credentials: 'same-origin' })
+    window.__orthoAuth.post($('ca-win'))
       .then((res) => {
         if (/\/challenge/.test(new URL(res.url, location.href).pathname)) throw new Error('challenge');
         show('ca-sent');

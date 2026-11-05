@@ -20,9 +20,13 @@
   const PAGE = location.pathname;
   // Mode stand (tablette de la borne) : ?borne dans l'adresse → plein écran au premier toucher,
   // et on revient en mode stand après chaque déconnexion « Joueur suivant ».
-  const STAND = new URLSearchParams(location.search).has('borne') || new URLSearchParams(location.search).has('ecran')
-    || (() => { try { return sessionStorage.getItem('orthoStand') === '1' || sessionStorage.getItem('orthoEcran') === '1'; } catch { return false; } })();
-  if (STAND) { try { sessionStorage.setItem('orthoStand', '1'); } catch {} }
+  // Mémorisé sur l'appareil (localStorage) : la borne reste une borne même si « ?borne » disparaît de
+  // l'adresse. ?site remet l'appareil en mode site normal.
+  const qsMode = new URLSearchParams(location.search);
+  try { if (qsMode.has('site')) { localStorage.removeItem('orthoStandDevice'); sessionStorage.removeItem('orthoStand'); sessionStorage.removeItem('orthoEcran'); } } catch {}
+  const STAND = qsMode.has('borne') || qsMode.has('ecran')
+    || (() => { try { return localStorage.getItem('orthoStandDevice') === '1' || sessionStorage.getItem('orthoStand') === '1' || sessionStorage.getItem('orthoEcran') === '1'; } catch { return false; } })();
+  if (STAND) { try { sessionStorage.setItem('orthoStand', '1'); localStorage.setItem('orthoStandDevice', '1'); } catch {} }
   // Mode écran (grande TV du stand) : ?ecran → la TV n'affiche que le jeu ; inscription, connexion,
   // partie et gain se font sur le téléphone-manette. ?ecran&rotation=90 (ou 270) pour une TV posée
   // à la verticale (les navigateurs de TV ne tournent pas l'image). ?ecran&rotation=0 pour annuler.
@@ -241,7 +245,7 @@
             <input type="hidden" name="form_type" value="create_customer">
             <input type="hidden" name="utf8" value="✓">
             <input type="hidden" name="customer[tags]" id="ca-tags" value="${REG_TAGS}">
-            <input type="hidden" name="return_to" value="${esc(PAGE)}">
+            <input type="hidden" name="return_to" value="${esc(STAND ? `${PAGE}?borne` : PAGE)}">
             <div class="row">
               <label>PRÉNOM<input name="customer[first_name]" autocomplete="given-name" required></label>
               <label>NOM<input name="customer[last_name]" autocomplete="family-name" required></label>
@@ -273,13 +277,12 @@
           <form class="ca-f" method="post" action="/account/login" accept-charset="UTF-8" id="ca-login-form">
             <input type="hidden" name="form_type" value="customer_login">
             <input type="hidden" name="utf8" value="✓">
-            <input type="hidden" name="return_url" value="${esc(PAGE)}">
+            <input type="hidden" name="return_url" value="${esc(STAND ? `${PAGE}?borne` : PAGE)}">
             <label>EMAIL<input type="email" name="customer[email]" autocomplete="email" required></label>
             <label>MOT DE PASSE<input type="password" name="customer[password]" autocomplete="current-password" required></label>
             <button class="ca-btn alt" type="submit">▶ Me connecter et jouer</button>
           </form>
-          <a class="ca-link ca-nostand" href="/account/login#recover">Mot de passe oublié ?</a>
-          <p class="ca-p" ${STAND ? '' : 'hidden'}>Mot de passe oublié ? Demandez à l'équipe Capsule du stand.</p>
+          <button type="button" class="ca-link" id="ca-recover">Mot de passe oublié ou compte Google ?</button>
           <button type="button" class="ca-link" data-go="ca-register">Créer un compte</button>
           <button type="button" class="ca-link" data-go="ca-coin">◀ Retour</button>
         </div></div>
@@ -629,13 +632,14 @@
     attract();
   }
 
-  // ── Borne : connexion et inscription envoyées en arrière-plan, sans jamais quitter l'écran du jeu ──
-  // Une erreur Shopify (mauvais mot de passe, email déjà inscrit) afficherait sinon sa propre page.
-  // Seule exception : la vérification anti-robot de Shopify, qui revient ensuite à la borne.
-  if (STAND) {
+  // ── Connexion et inscription envoyées en arrière-plan, sans jamais quitter l'écran du jeu ──
+  // (borne et site) : une erreur Shopify (mauvais mot de passe, email déjà inscrit) afficherait
+  // sinon sa propre page de connexion. La vérification anti-robot est signalée dans le jeu.
+  {
+    // Formulaires de la borne cachés aux scripts du thème (sinon : redirection vers « Mon compte »).
+    ['ca-login-form', 'ca-reg-form', 'ca-win'].forEach((id) => window.__orthoAuth.shield($(id)));
     const viaFetch = (form, kind) => form.addEventListener('submit', async (e) => {
-      if (e.defaultPrevented) return;
-      e.preventDefault();
+      window.__orthoAuth.guard(e);
       const btn = form.querySelector('[type=submit]');
       btn.disabled = true;
       const r = await window.__orthoAuth.send(form);
@@ -649,7 +653,7 @@
         if (id) { setCustomer(id); loggedInit(true); return; }
         // Identifiant introuvable : rechargement, la partie démarre dès l'arrivée.
         try { sessionStorage.setItem(AUTOPLAY_KEY, '1'); } catch {}
-        location.replace(`${PAGE}?borne`);
+        location.replace(STAND ? `${PAGE}?borne` : PAGE);
         return;
       }
       // Erreur : le formulaire reste rempli, seule la ligne à corriger est signalée.
@@ -659,6 +663,7 @@
       bad?.focus?.();
     });
     viaFetch($('ca-login-form'), 'login');
+    window.__orthoAuth.bindRecover($('ca-recover'), $('ca-login-form'));
     viaFetch($('ca-reg-form'), 'register');
     // Borne partagée : jamais de données du joueur précédent. Pas d'auto-remplissage du navigateur,
     // formulaires vidés à chaque changement d'écran et à chaque (re)chargement de la page.
@@ -793,14 +798,13 @@
 
   // ── Une partie par participant, puis déconnexion pour le joueur suivant ──
   root.querySelectorAll('#ca-next, .ca-next').forEach((a) => { a.href = LOGOUT_URL; });
-  if (STAND) root.querySelectorAll('#ca-next, .ca-next, .ca-bar a[href*="logout"]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); leave(); }));
+  root.querySelectorAll('#ca-next, .ca-next, .ca-bar a[href*="logout"]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); leave(); }));
   let countdown = null;
   // Joueur suivant : en borne, déconnexion en arrière-plan puis retour direct à l'accueil de la borne
   // (jamais de page du site). Ailleurs, déconnexion classique Shopify.
   function leave() {
     clearInterval(countdown);
-    if (!STAND) { location.href = LOGOUT_URL; return; }
-    fetch('/account/logout', { credentials: 'same-origin' }).catch(() => {}).finally(() => location.replace(`${PAGE}?borne`));
+    fetch('/account/logout', { credentials: 'same-origin' }).catch(() => {}).finally(() => location.replace(STAND ? `${PAGE}?borne` : PAGE));
   }
   function logoutIn(seconds, elId, label) {
     clearInterval(countdown);
@@ -885,11 +889,10 @@
     if (!TESTER) store.set(WON_KEY, reward.id);
     else store.set(`orthoInvadersTestSent`, '1');
     clearInterval(countdown);
-    if (!STAND) return; // site : envoi classique du formulaire de contact
     // Borne : envoi en arrière-plan, on reste dans le jeu.
-    e.preventDefault();
+    window.__orthoAuth.guard(e);
     $('ca-send').disabled = true;
-    fetch($('ca-win').action, { method: 'POST', body: new FormData($('ca-win')), credentials: 'same-origin' })
+    window.__orthoAuth.post($('ca-win'))
       .then((res) => {
         if (/\/challenge/.test(new URL(res.url, location.href).pathname)) throw new Error('challenge');
         show('ca-sent');
