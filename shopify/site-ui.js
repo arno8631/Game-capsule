@@ -142,20 +142,21 @@
   .ca-fire.down{transform:translateY(4px)}
   /* En partie : on libère un max de place pour l'écran de jeu */
   .ca.paired .ca-pad{display:none!important}
-  #capsule-arcade .ca-kb{position:absolute;z-index:20;left:0;right:0;bottom:0;display:grid;gap:.8vh;
-    padding:1.2vh max(12px,env(safe-area-inset-right)) max(1.6vh,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
-    background:linear-gradient(180deg,#1a0544,#0b0322);border-top:3px solid #2de2e6;box-shadow:0 -10px 40px rgba(45,226,230,.35);
+  /* Clavier à hauteur de main d'un adulte debout (pas collé au bas de la borne), largeur réduite */
+  #capsule-arcade .ca-kb{position:absolute;z-index:20;left:50%;transform:translateX(-50%);bottom:clamp(16px,17vh,420px);
+    width:min(calc(100% - 32px),720px);display:grid;gap:.7vh;padding:1.2vh 12px;border-radius:14px;
+    background:linear-gradient(180deg,#1a0544,#0b0322);border:3px solid #2de2e6;box-shadow:0 0 0 6px rgba(5,1,15,.85),0 0 40px rgba(45,226,230,.35);
     user-select:none;-webkit-user-select:none;touch-action:manipulation}
   #capsule-arcade .ca-kb[hidden]{display:none!important}
   .ca-kb-row{display:flex;gap:.6vh;justify-content:center}
-  .ca-kb-k{flex:1 1 0;min-width:0;height:clamp(44px,6.2vh,96px);font-family:'VT323',ui-monospace,monospace;font-size:clamp(24px,3.6vh,52px);
+  .ca-kb-k{flex:1 1 0;min-width:0;height:clamp(44px,5.4vh,84px);font-family:'VT323',ui-monospace,monospace;font-size:clamp(24px,3.2vh,46px);
     color:#f5f3ff;background:#1f0b4a;border:2px solid #5a2391;border-radius:6px;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent}
   .ca-kb-k.fn{flex:1.5 1 0;font-family:'Press Start 2P',monospace;font-size:clamp(10px,1.4vh,20px);color:#2de2e6}
   .ca-kb-k.space{flex:4 1 0}
   .ca-kb-k[data-k="OK ▶"]{flex:2 1 0;background:#ffd319;color:#12062e;border-color:#ffd319}
   .ca-kb-k.on{background:#2de2e6;color:#12062e}
   .ca-kb-k.down{transform:translateY(2px);background:#2a1566}
-  .ca-kb-row.dom .ca-kb-k{font-family:'VT323',ui-monospace,monospace;font-size:clamp(18px,2.4vh,36px);color:#ffd319;height:clamp(38px,5vh,80px);white-space:nowrap;overflow:hidden}
+  .ca-kb-row.dom .ca-kb-k{font-family:'VT323',ui-monospace,monospace;font-size:clamp(16px,2vh,30px);color:#ffd319;height:clamp(38px,5vh,80px);white-space:nowrap;overflow:hidden}
   .ca-kb-row.dom .ca-kb-k[data-k^="@"]{flex:2 1 0}
   .kb-open .ca-pad,.kb-open .ca-bar{visibility:hidden}
   .ca.tv .ca-pad,.ca.tv .ca-bar > :not(#ca-pad-code){display:none!important}
@@ -535,7 +536,7 @@
       // Le champ actif reste visible au-dessus du clavier.
       const ov = target?.closest('.ca-ov');
       if (!ov) return;
-      ov.style.paddingBottom = `${kb.offsetHeight}px`;
+      ov.style.paddingBottom = `${Math.max(0, ov.getBoundingClientRect().bottom - kb.getBoundingClientRect().top) + 24}px`;
       const r = target.getBoundingClientRect();
       const top = kb.getBoundingClientRect().top - 24;
       if (r.bottom > top) ov.scrollTop += r.bottom - top;
@@ -634,12 +635,27 @@
     });
     viaFetch($('ca-login-form'), 'login');
     viaFetch($('ca-reg-form'), 'register');
-    // « J'ai déjà un compte » depuis l'inscription : l'email déjà saisi est repris.
-    root.querySelectorAll('#ca-register [data-go="ca-login"]').forEach((b) => b.addEventListener('click', () => {
-      const from = $('ca-reg-form').querySelector('[name="customer[email]"]').value;
-      const to = $('ca-login-form').querySelector('[name="customer[email]"]');
-      if (from && !to.value) to.value = from;
-    }));
+    // Borne partagée : jamais de données du joueur précédent. Pas d'auto-remplissage du navigateur,
+    // formulaires vidés à chaque changement d'écran et à chaque (re)chargement de la page.
+    const forms = [$('ca-login-form'), $('ca-reg-form')];
+    const wipe = () => forms.forEach((f) => {
+      f.reset();
+      window.__orthoAuth.clear(f);
+      f.querySelector('[type=submit]').disabled = false;
+    });
+    forms.forEach((f) => {
+      f.setAttribute('autocomplete', 'off');
+      f.querySelectorAll('input:not([type=hidden]):not([type=checkbox])').forEach((i) => {
+        i.setAttribute('autocomplete', i.type === 'password' ? 'new-password' : 'off');
+        i.setAttribute('autocorrect', 'off');
+        i.setAttribute('autocapitalize', 'off');
+        i.setAttribute('spellcheck', 'false');
+      });
+    });
+    root.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', wipe));
+    wipe();
+    addEventListener('pageshow', wipe);
+    setTimeout(wipe, 300); // après une éventuelle restauration de formulaire par Chrome
   }
 
   if (REMOTE) { startRemote(); return; }

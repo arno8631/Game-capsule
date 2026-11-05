@@ -481,7 +481,6 @@
       }).catch(() => {});
     });
     let tvMode = false;
-    let lastEmail = '';
     let view = null;
     let countdown = null;
     let result = null;
@@ -585,15 +584,14 @@
     // Connexion / inscription en arrière-plan : on ne quitte jamais la manette.
     function bindAuth(kind) {
       const form = acc.querySelector('form');
-      const email = form.querySelector('[name="customer[email]"]');
-      if (lastEmail && !email.value) email.value = lastEmail;
-      email.addEventListener('input', () => { lastEmail = email.value; });
+      // Téléphone partagé du stand : champs toujours vides, sans auto-remplissage du navigateur.
+      form.setAttribute('autocomplete', 'off');
+      form.querySelectorAll('input:not([type=hidden]):not([type=checkbox])').forEach((i) => i.setAttribute('autocomplete', i.type === 'password' ? 'new-password' : 'off'));
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (kind === 'register') { const prof = $('mp-prof').value; $('mp-tags').value = prof ? `${REG_TAGS}, ${prof}` : REG_TAGS; }
         const btn = form.querySelector('[type=submit]');
         btn.disabled = true;
-        lastEmail = email.value;
         const r = await auth.send(form);
         if (r.challenge) { form.submit(); return; }
         if (r.ok) { location.replace(HOME); return; }
