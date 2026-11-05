@@ -1850,6 +1850,7 @@ window.__orthoInvadersGame = function () {
         document.head.appendChild(st);
       }
       const submit = form.querySelector('[type=submit]');
+      if (result.challenge) return auth.mark(form, '[type=submit]', 'Shopify demande une vérification anti-robot : appelez l’équipe Capsule du stand.') && submit;
       if (result.network) return auth.mark(form, '[type=submit]', 'Pas de connexion Internet : réessayez dans un instant.') && submit;
       const EMAIL = '[name="customer[email]"]', PASS = '[name="customer[password]"]';
       if (kind === 'login') {
@@ -2361,7 +2362,6 @@ window.__orthoInvadersGame = function () {
         const btn = form.querySelector('[type=submit]');
         btn.disabled = true;
         const r = await auth.send(form);
-        if (r.challenge) { form.submit(); return; }
         if (r.ok) { location.replace(HOME); return; }
         btn.disabled = false;
         const bad = auth.show(form, kind, r);
@@ -2411,10 +2411,14 @@ window.__orthoInvadersGame = function () {
         if (!tester) store.set(`orthoInvadersWon:${cid}`, reward.id);
         try {
           const res = await fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin' });
-          if (/\/challenge/.test(res.url)) { form.submit(); return; }
-        } catch {}
-        result.reward = reward;
-        go('thanks');
+          if (/\/challenge/.test(new URL(res.url, location.href).pathname)) throw new Error('challenge');
+          result.reward = reward;
+          go('thanks');
+        } catch {
+          $('mp-send').disabled = false;
+          auth.clear(form);
+          auth.mark(form, '[type=submit]', 'Envoi impossible pour le moment : montrez cet écran à l’équipe Capsule du stand, elle notera votre gain.');
+        }
       });
     }
 
@@ -2459,7 +2463,7 @@ window.__orthoInvadersGame = function () {
 // Victoire : formulaire de contact natif → l'équipe crée le code 100 % lié au compte du gagnant.
 (function () {
   const root = document.getElementById('capsule-arcade');
-  if (!root) return;
+  if (!root || window.self !== window.top) return;
   // Téléphone du stand : ?manette → la page devient la manette de la borne (voir pad-link.js)
   const qsPad = new URLSearchParams(location.search);
   if (qsPad.has('manette') && window.__orthoPad) { window.__orthoPad.phone(root, qsPad.get('manette')); return; }
@@ -2914,6 +2918,11 @@ window.__orthoInvadersGame = function () {
 
   if (ECRAN && pad) { startTv(); return; }
   if (STAND) initKeyboard();
+  // Borne : aucun lien ne doit ouvrir une page du site (la déconnexion est gérée à part).
+  if (STAND) root.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href]');
+    if (a && !a.matches('#ca-next, .ca-next, [href*="logout"]')) e.preventDefault();
+  }, true);
 
   // ── Clavier virtuel de la borne ─────────────────────────────
   // Sur une borne tactile Windows, Chrome n'ouvre pas le clavier du système : la borne a le sien.
@@ -3079,7 +3088,6 @@ window.__orthoInvadersGame = function () {
       const btn = form.querySelector('[type=submit]');
       btn.disabled = true;
       const r = await window.__orthoAuth.send(form);
-      if (r.challenge) { form.submit(); return; }
       // Connecté : la borne se recharge et la partie peut commencer.
       if (r.ok) { location.replace(`${PAGE}?borne`); return; }
       // Erreur : le formulaire reste rempli, seule la ligne à corriger est signalée.
@@ -3215,14 +3223,22 @@ window.__orthoInvadersGame = function () {
 
   // ── Une partie par participant, puis déconnexion pour le joueur suivant ──
   root.querySelectorAll('#ca-next, .ca-next').forEach((a) => { a.href = LOGOUT_URL; });
+  if (STAND) root.querySelectorAll('#ca-next, .ca-next, .ca-bar a[href*="logout"]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); leave(); }));
   let countdown = null;
+  // Joueur suivant : en borne, déconnexion en arrière-plan puis retour direct à l'accueil de la borne
+  // (jamais de page du site). Ailleurs, déconnexion classique Shopify.
+  function leave() {
+    clearInterval(countdown);
+    if (!STAND) { location.href = LOGOUT_URL; return; }
+    fetch('/account/logout', { credentials: 'same-origin' }).catch(() => {}).finally(() => location.replace(`${PAGE}?borne`));
+  }
   function logoutIn(seconds, elId, label) {
     clearInterval(countdown);
     if (TESTER) { $(elId).textContent = 'Compte test : pas de déconnexion automatique'; return; }
     let left = seconds;
     const tick = () => {
       $(elId).textContent = `${label} dans ${left} s`;
-      if (left-- <= 0) { clearInterval(countdown); location.href = LOGOUT_URL; }
+      if (left-- <= 0) { clearInterval(countdown); leave(); }
     };
     tick();
     countdown = setInterval(tick, 1000);
@@ -3297,6 +3313,21 @@ window.__orthoInvadersGame = function () {
     if (!TESTER) store.set(WON_KEY, reward.id);
     else store.set(`orthoInvadersTestSent`, '1');
     clearInterval(countdown);
+    if (!STAND) return; // site : envoi classique du formulaire de contact
+    // Borne : envoi en arrière-plan, on reste dans le jeu.
+    e.preventDefault();
+    $('ca-send').disabled = true;
+    fetch($('ca-win').action, { method: 'POST', body: new FormData($('ca-win')), credentials: 'same-origin' })
+      .then((res) => {
+        if (/\/challenge/.test(new URL(res.url, location.href).pathname)) throw new Error('challenge');
+        show('ca-sent');
+        logoutIn(20, 'ca-sent-count', 'Déconnexion automatique');
+      })
+      .catch(() => {
+        $('ca-send').disabled = false;
+        window.__orthoAuth.clear($('ca-win'));
+        window.__orthoAuth.mark($('ca-win'), '[type=submit]', 'Envoi impossible pour le moment : montrez cet écran à l’équipe Capsule du stand, elle notera votre gain.');
+      });
   });
 
   $('ca-play').addEventListener('click', play);

@@ -82,6 +82,7 @@
         document.head.appendChild(st);
       }
       const submit = form.querySelector('[type=submit]');
+      if (result.challenge) return auth.mark(form, '[type=submit]', 'Shopify demande une vérification anti-robot : appelez l’équipe Capsule du stand.') && submit;
       if (result.network) return auth.mark(form, '[type=submit]', 'Pas de connexion Internet : réessayez dans un instant.') && submit;
       const EMAIL = '[name="customer[email]"]', PASS = '[name="customer[password]"]';
       if (kind === 'login') {
@@ -593,7 +594,6 @@
         const btn = form.querySelector('[type=submit]');
         btn.disabled = true;
         const r = await auth.send(form);
-        if (r.challenge) { form.submit(); return; }
         if (r.ok) { location.replace(HOME); return; }
         btn.disabled = false;
         const bad = auth.show(form, kind, r);
@@ -643,10 +643,14 @@
         if (!tester) store.set(`orthoInvadersWon:${cid}`, reward.id);
         try {
           const res = await fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin' });
-          if (/\/challenge/.test(res.url)) { form.submit(); return; }
-        } catch {}
-        result.reward = reward;
-        go('thanks');
+          if (/\/challenge/.test(new URL(res.url, location.href).pathname)) throw new Error('challenge');
+          result.reward = reward;
+          go('thanks');
+        } catch {
+          $('mp-send').disabled = false;
+          auth.clear(form);
+          auth.mark(form, '[type=submit]', 'Envoi impossible pour le moment : montrez cet écran à l’équipe Capsule du stand, elle notera votre gain.');
+        }
       });
     }
 
