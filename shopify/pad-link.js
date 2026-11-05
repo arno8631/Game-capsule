@@ -32,6 +32,76 @@
     ],
   };
 
+  // ── Connexion / inscription Shopify en arrière-plan (borne et manette) ──
+  // Le formulaire n'est jamais vidé : en cas d'erreur, seule la ligne à corriger est signalée.
+  const auth = {
+    async send(form) {
+      let res;
+      try { res = await fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin' }); }
+      catch { return { ok: false, network: true, errors: [] }; }
+      const path = new URL(res.url, location.href).pathname;
+      if (/\/challenge/.test(path)) return { challenge: true };
+      // Réussite = Shopify redirige vers l'adresse de retour ; échec = il réaffiche son formulaire.
+      if (res.redirected && !/^\/account\/(login|register)/.test(path)) return { ok: true };
+      const errors = [];
+      try {
+        const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+        doc.querySelectorAll('.errors li, .errors, [class*="error"] li, [class*="form__message"]').forEach((el) => {
+          const t = el.textContent.replace(/\s+/g, ' ').trim();
+          if (t && t.length < 200 && !errors.includes(t)) errors.push(t);
+        });
+      } catch {}
+      return { ok: false, errors };
+    },
+    clear(form) {
+      form.querySelectorAll('.oa-bad').forEach((el) => el.classList.remove('oa-bad'));
+      form.querySelectorAll('.oa-msg').forEach((el) => el.remove());
+    },
+    mark(form, selector, msg) {
+      const input = form.querySelector(selector);
+      if (!input) return null;
+      input.classList.add('oa-bad');
+      if (msg) {
+        const m = document.createElement('span');
+        m.className = 'oa-msg';
+        m.setAttribute('role', 'alert');
+        m.textContent = msg;
+        input.insertAdjacentElement('afterend', m);
+      }
+      input.addEventListener('input', () => { input.classList.remove('oa-bad'); input.nextElementSibling?.classList.contains('oa-msg') && input.nextElementSibling.remove(); }, { once: true });
+      return input;
+    },
+    // Place chaque erreur sur sa ligne ; renvoie le champ à corriger (focus).
+    show(form, kind, result) {
+      auth.clear(form);
+      if (!document.getElementById('oa-style')) {
+        const st = document.createElement('style');
+        st.id = 'oa-style';
+        st.textContent = `.oa-bad{border-color:#ff2a6d!important;box-shadow:0 0 0 2px #ff2a6d!important}
+          .oa-msg{display:block;font-family:'VT323',ui-monospace,monospace;font-size:1.7em;line-height:1;letter-spacing:0;color:#ff7ba3;text-transform:none}`;
+        document.head.appendChild(st);
+      }
+      const submit = form.querySelector('[type=submit]');
+      if (result.network) return auth.mark(form, '[type=submit]', 'Pas de connexion Internet : réessayez dans un instant.') && submit;
+      const EMAIL = '[name="customer[email]"]', PASS = '[name="customer[password]"]';
+      if (kind === 'login') {
+        auth.mark(form, EMAIL, '');
+        return auth.mark(form, PASS, 'Email ou mot de passe incorrect : vérifiez ces deux lignes.');
+      }
+      const txt = result.errors.join(' ').toLowerCase();
+      let first = null;
+      const add = (sel, msg) => { const el = auth.mark(form, sel, msg); first ??= el; };
+      if (/(e-?mail|courriel)/.test(txt) && /(déjà|already|taken|utilis|exist)/.test(txt)) add(EMAIL, 'Cette adresse a déjà un compte Capsule : touchez « J’ai déjà un compte ».');
+      else if (/(e-?mail|courriel)/.test(txt)) add(EMAIL, 'Adresse email non valide.');
+      if (/(mot de passe|password)/.test(txt)) add(PASS, 'Mot de passe trop court (6 caractères minimum).');
+      if (/(prénom|first)/.test(txt)) add('[name="customer[first_name]"]', 'Prénom obligatoire.');
+      if (/(\bnom\b|last name)/.test(txt)) add('[name="customer[last_name]"]', 'Nom obligatoire.');
+      if (!first) add(EMAIL, 'Compte non créé : cette adresse a sans doute déjà un compte Capsule (touchez « J’ai déjà un compte »).');
+      return first;
+    },
+  };
+  window.__orthoAuth = auth;
+
   let peerLib = null;
   function loadPeer() {
     if (window.Peer) return Promise.resolve();
@@ -395,7 +465,6 @@
     const logged = Boolean(cid);
     const tester = logged && CFG.TESTERS.includes(cid);
     const PLAYED_KEY = `orthoInvadersPlayed:${cid}`;
-    const AUTH_KEY = 'orthoPadAuth';
     const REG_TAGS = ['jeuJO', 'jeuJO-2026', 'jeuJO-inscrit', CFG.BORNE_TAG].join(', ');
     if (new URLSearchParams(location.search).has('reset')) {
       try { Object.keys(localStorage).filter((k) => k.startsWith('orthoInvaders')).forEach((k) => localStorage.removeItem(k)); } catch {}
@@ -412,6 +481,7 @@
       }).catch(() => {});
     });
     let tvMode = false;
+    let lastEmail = '';
     let view = null;
     let countdown = null;
     let result = null;
@@ -515,26 +585,22 @@
     // Connexion / inscription en arrière-plan : on ne quitte jamais la manette.
     function bindAuth(kind) {
       const form = acc.querySelector('form');
-      try {
-        if (sessionStorage.getItem(AUTH_KEY) === kind) {
-          sessionStorage.removeItem(AUTH_KEY);
-          const err = acc.querySelector('.mp-err');
-          err.textContent = kind === 'register'
-            ? 'Compte non créé : cette adresse a peut-être déjà un compte Capsule (touchez « J’ai déjà un compte »).'
-            : 'Connexion refusée : vérifiez l’email et le mot de passe.';
-          err.hidden = false;
-        }
-      } catch {}
+      const email = form.querySelector('[name="customer[email]"]');
+      if (lastEmail && !email.value) email.value = lastEmail;
+      email.addEventListener('input', () => { lastEmail = email.value; });
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (kind === 'register') { const prof = $('mp-prof').value; $('mp-tags').value = prof ? `${REG_TAGS}, ${prof}` : REG_TAGS; }
-        form.querySelector('[type=submit]').disabled = true;
-        try { sessionStorage.setItem(AUTH_KEY, kind); } catch {}
-        try {
-          const res = await fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin' });
-          if (/\/challenge/.test(res.url)) { try { sessionStorage.removeItem(AUTH_KEY); } catch {} form.submit(); return; }
-        } catch {}
-        location.replace(HOME);
+        const btn = form.querySelector('[type=submit]');
+        btn.disabled = true;
+        lastEmail = email.value;
+        const r = await auth.send(form);
+        if (r.challenge) { form.submit(); return; }
+        if (r.ok) { location.replace(HOME); return; }
+        btn.disabled = false;
+        const bad = auth.show(form, kind, r);
+        bad?.scrollIntoView?.({ block: 'center' });
+        bad?.focus?.();
       });
     }
 
@@ -602,10 +668,8 @@
         helloSeen = true;
         if (!tvMode) {
           tvMode = true;
-          let pending = null;
-          try { pending = sessionStorage.getItem(AUTH_KEY); } catch {}
-          if (!logged) go(pending === 'register' || pending === 'login' ? pending : 'guest');
-          else { try { sessionStorage.removeItem(AUTH_KEY); } catch {} go(!tester && store.get(PLAYED_KEY) ? 'played' : 'ready'); }
+          if (!logged) go('guest');
+          else go(!tester && store.get(PLAYED_KEY) ? 'played' : 'ready');
         } else if (view) { send({ t: 'ps', s: PS[view] || view }); syncReady(); }
         return;
       }
