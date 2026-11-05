@@ -11,6 +11,13 @@
     get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
     set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
   };
+  // Remise à zéro générale (parties jouées, gains, meilleur score) : changer RESET_ID et republier.
+  // Chaque borne / manette s'efface d'elle-même au chargement suivant. Le code manette est conservé.
+  const RESET_ID = '2026-11-05-a';
+  if (store.get('orthoResetId') !== RESET_ID) {
+    try { Object.keys(localStorage).filter((k) => k.startsWith('orthoInvaders')).forEach((k) => localStorage.removeItem(k)); } catch {}
+    store.set('orthoResetId', RESET_ID);
+  }
   const cleanCode = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
   const clamp = (x) => Math.max(-1, Math.min(1, Number(x) || 0));
   const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
