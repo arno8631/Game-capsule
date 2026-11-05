@@ -30,12 +30,9 @@
     BORNE_TAG: 'BorneJo2026',
     // Comptes de test Capsule (identifiants clients Shopify) : parties illimitées, pas de déconnexion auto.
     TESTERS: ['23773949821273', '23276575129945', '23130642612569', '23662288142681', '23394139406681'],
-    // price : valeur de secours en € ; le prix réel est relu sur la fiche produit (url, jamais affichée).
+    // Lot unique : bon d'achat (montant en €) à valoir sur capsule-med.com.
     REWARDS: [
-      { id: 'biomecanique', speaker: 'Dr Skander Ellouze', title: 'Replay Biomécanique : maîtriser les clés de l’excellence en orthodontie',
-        url: '/products/replay-biomecanique-maitriser-les-cles-de-lexcellence-en-orthodontie', price: 900 },
-      { id: 'contentions', speaker: 'Dr Philippides', title: 'Replay Adieu les urgences : maîtriser le collage des contentions',
-        url: '/products/replay-adieu-les-urgences-maitriser-le-collage-des-contentions', price: 249 },
+      { id: 'bon500', amount: 500, label: 'BON D’ACHAT · 500 € OFFERT', title: 'Bon d’achat de 500 € à valoir sur les formations Capsule' },
     ],
   };
 
@@ -530,16 +527,7 @@
       try { Object.keys(localStorage).filter((k) => k.startsWith('orthoInvaders')).forEach((k) => localStorage.removeItem(k)); } catch {}
     }
     const acc = $('mp-acc');
-    const euros = (n) => `${Number(n).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} €`;
-    const prices = {};
-    CFG.REWARDS.forEach((r) => {
-      prices[r.id] = r.price;
-      fetch(`${r.url}.js`).then((res) => (res.ok ? res.json() : null)).then((prod) => {
-        if (!prod || !Number.isFinite(prod.price)) return;
-        prices[r.id] = prod.price / 100;
-        acc.querySelectorAll(`[data-price="${r.id}"]`).forEach((el) => { el.textContent = euros(prices[r.id]); });
-      }).catch(() => {});
-    });
+    const PRIZE = CFG.REWARDS[0];
     let tvMode = false;
     let view = null;
     let countdown = null;
@@ -559,7 +547,7 @@
       tick();
       countdown = setInterval(tick, 1000);
     }
-    const prizeList = () => CFG.REWARDS.map((r) => `<div class="mp-prize"><b>${esc(r.speaker.toUpperCase())} · <span data-price="${r.id}">${euros(prices[r.id])}</span> OFFERT</b><span>${esc(r.title)}</span></div>`).join('');
+    const prizeList = () => CFG.REWARDS.map((r) => `<div class="mp-prize"><b>${esc(r.label)}</b><span>${esc(r.title)}</span></div>`).join('');
     const nextBtns = () => `${tester ? '<button type="button" class="mp-btn alt" data-act="replay">↻ Rejouer (compte test)</button>' : ''}
       <button type="button" class="mp-btn" data-act="logout">▶ Joueur suivant</button><p class="mp-count"></p>`;
 
@@ -604,15 +592,15 @@
         <button type="button" class="mp-link" data-act="logout">Ce n'est pas moi : changer de joueur</button>`,
       played: () => `<p class="mp-h">DÉJÀ JOUÉ</p><p class="mp-p">Vous avez déjà joué votre partie. Merci et à bientôt sur capsule-med.com !</p>${nextBtns()}`,
       lose: () => `<p class="mp-h">GAME OVER</p><p class="mp-p">${result.score} points. La Méga-Carie a gagné cette fois… Merci d'avoir joué !</p>${nextBtns()}`,
-      win: () => `<p class="mp-h">★ VICTOIRE ★</p><p class="mp-p">Bravo ! ${result.score} points. Choisissez votre replay offert :</p>
-        ${CFG.REWARDS.map((r) => `<button type="button" class="mp-prize" data-rw="${r.id}"><b>${esc(r.speaker.toUpperCase())} · <span data-price="${r.id}">${euros(prices[r.id])}</span></b><span>${esc(r.title)}</span></button>`).join('')}
+      win: () => `<p class="mp-h">★ VICTOIRE ★</p><p class="mp-p">Bravo ! ${result.score} points. Vous gagnez :</p>${prizeList()}
+        <p class="mp-p" style="font-size:20px">Confirmez l’email de votre compte Capsule : l’équipe vous y envoie votre code.</p>
         <form class="mp-v" method="post" action="/contact#contact_form" accept-charset="UTF-8" id="mp-win">
           <input type="hidden" name="form_type" value="contact"><input type="hidden" name="utf8" value="✓">
           <input type="hidden" name="contact[name]" value="Gagnant Ortho Invaders"><input type="hidden" name="contact[body]" id="mp-body">
           <label>VOTRE EMAIL DE COMPTE CAPSULE<input type="email" name="contact[email]" id="mp-wem" autocomplete="email" required></label>
           <button class="mp-btn" type="submit" id="mp-send" disabled>Valider mon gain</button>
         </form><p class="mp-count"></p>`,
-      thanks: () => `<p class="mp-h">GAIN ENREGISTRÉ</p><p class="mp-p">L'équipe Capsule vous envoie par email votre code personnel pour « ${esc(result.reward.title)} ».</p>${nextBtns()}`,
+      thanks: () => `<p class="mp-h">GAIN ENREGISTRÉ</p><p class="mp-p">L'équipe Capsule vous envoie par email votre code personnel : ${esc(PRIZE.title.charAt(0).toLowerCase() + PRIZE.title.slice(1))}.</p>${nextBtns()}`,
     };
     const PS = { guest: 'guest', register: 'guest', login: 'guest', ready: 'ready' };
 
@@ -675,13 +663,9 @@
     }
 
     function bindWin() {
-      let reward = null;
+      const reward = PRIZE;
       countTo(180, 'Déconnexion automatique');
-      acc.querySelectorAll('[data-rw]').forEach((b) => b.addEventListener('click', () => {
-        reward = CFG.REWARDS.find((r) => r.id === b.dataset.rw);
-        acc.querySelectorAll('[data-rw]').forEach((x) => x.classList.toggle('on', x === b));
-        $('mp-send').disabled = false;
-      }));
+      $('mp-send').disabled = false;
       const form = auth.shield($('mp-win'));
       form.addEventListener('submit', async (e) => {
         auth.guard(e);
@@ -690,14 +674,14 @@
         $('mp-body').value = [
           tester ? '[COMPTE TEST — ne pas créer de code]' : 'NOUVEAU GAGNANT — ORTHO INVADERS (borne TV du stand)',
           result.seconds < 90 ? '⚠ PARTIE ANORMALEMENT COURTE (moins de 90 s) : vérifier avant de créer le code.' : 'Durée de partie normale.',
-          `Replay choisi : ${reward.title} (${reward.speaker})`,
+          `Gain : ${reward.title}`,
           `Email déclaré : ${$('mp-wem').value}`,
           `Compte client Shopify : ${cid}`,
           `Score : ${result.score} · Durée de la partie : ${result.seconds} s · Vague : ${result.wave}`,
           `Date : ${when}`,
           'Appareil : grand écran du stand + téléphone-manette',
           '',
-          'À faire : Réductions > Créer > Montant de réduction sur les produits, 100 %, produit = replay choisi,',
+          `À faire : Réductions > Créer > Montant de réduction sur la commande, montant fixe ${reward.amount} €,`,
           'Admissibilité = ce client uniquement, Limite = 1 utilisation. Puis envoyer le code au gagnant.',
         ].join('\n');
         $('mp-send').disabled = true;

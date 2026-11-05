@@ -198,10 +198,10 @@
   style.textContent = css;
   document.head.appendChild(style);
 
-  // Lot : conférencier et prix du replay, puis titre. Aucun lien : la borne ne laisse pas sortir du jeu.
-  const euros = (n) => `${Number(n).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} €`;
+  // Lot : bon d'achat (aucun lien : la borne ne laisse pas sortir du jeu).
+  const PRIZE = REWARDS[0];
   const prizeCards = REWARDS.map((r) => `<div class="ca-prize">
-    <span class="w">${esc(r.speaker.toUpperCase())} · <span data-price="${r.id}">${euros(r.price)}</span> OFFERT</span>
+    <span class="w">${esc(r.label)}</span>
     <span class="t">${esc(r.title)}</span></div>`).join('');
   const back = encodeURIComponent(PAGE);
 
@@ -217,7 +217,7 @@
         <!-- Écran TV : accueil (le joueur s'inscrit et joue avec le téléphone-manette) -->
         <div class="ca-ov" id="ca-tv" hidden><div class="ca-card">
           <p class="ca-t big ca-blink">INSERT<br>COIN</p>
-          <p class="ca-p">Protégez l'arcade dentaire, battez la <b>Méga-Carie</b> et gagnez un <b>replay de formation</b>.</p>
+          <p class="ca-p">Protégez l'arcade dentaire, battez la <b>Méga-Carie</b> et gagnez un <b>bon d'achat de ${PRIZE.amount} €</b> sur les formations Capsule.</p>
           <p class="ca-h">★ À GAGNER ★</p>
           <div class="ca-prizes">${prizeCards}</div>
           <p class="ca-p ca-tv-msg" id="ca-tv-msg">Prenez la manette : inscrivez-vous ou connectez-vous avec votre compte Capsule, puis jouez !</p>
@@ -229,7 +229,7 @@
         </div></div>
         <div class="ca-ov" id="ca-coin"><div class="ca-card">
           <p class="ca-t big ca-blink">INSERT<br>COIN</p>
-          <p class="ca-p">Protégez l'arcade dentaire, battez la <b>Méga-Carie</b> et gagnez un <b>replay de formation</b>.</p>
+          <p class="ca-p">Protégez l'arcade dentaire, battez la <b>Méga-Carie</b> et gagnez un <b>bon d'achat de ${PRIZE.amount} €</b> sur les formations Capsule.</p>
           <p class="ca-h">★ À GAGNER ★</p>
           <div class="ca-prizes">${prizeCards}</div>
           <p class="ca-p" style="font-size:4.4cqw">Jeu gratuit réservé aux praticiens inscrits sur Capsule.</p>
@@ -290,7 +290,7 @@
         <!-- Connecté : prêt à jouer -->
         <div class="ca-ov" id="ca-start" hidden><div class="ca-card">
           <p class="ca-t big">PRÊT,<br>DOCTEUR ?</p>
-          <p class="ca-p">3 vagues, puis la <b>Méga-Carie</b>. Battez-la et choisissez votre replay offert. <b>Une seule partie par participant</b> : concentrez-vous !</p>
+          <p class="ca-p">3 vagues, puis la <b>Méga-Carie</b>. Battez-la et gagnez un bon d'achat de ${PRIZE.amount} €. <b>Une seule partie par participant</b> : concentrez-vous !</p>
           <div class="ca-prizes">${prizeCards}</div>
           <button type="button" class="ca-btn" id="ca-play">▶ Jouer</button>
         </div></div>
@@ -382,13 +382,6 @@
   window.__orthoInvadersGame();
 
   const $ = (id) => document.getElementById(id);
-  // Prix à jour depuis Shopify (fiche produit en JSON, même domaine) ; on garde la valeur de secours sinon.
-  REWARDS.forEach((r) => {
-    fetch(`${r.url}.js`).then((res) => (res.ok ? res.json() : null)).then((prod) => {
-      if (!prod || !Number.isFinite(prod.price)) return;
-      root.querySelectorAll(`[data-price="${r.id}"]`).forEach((el) => { el.textContent = euros(prod.price / 100); });
-    }).catch(() => {});
-  });
   // Boutons tactiles : écran tactile détecté, ou borne du stand (?borne). Les bornes Windows tactiles
   // annoncent souvent un pointeur « fin » (souris) : on affiche quand même la manette tactile.
   if (STAND || matchMedia('(any-pointer: coarse)').matches) root.querySelector('.ca').classList.add('touch');
@@ -617,7 +610,7 @@
           show('ca-tv-end');
           $('ca-tv-end-t').textContent = won ? '★ VICTOIRE ★' : 'GAME OVER';
           $('ca-tv-end-p').textContent = won
-            ? `Bravo ! ${score} points. Choisissez votre replay offert sur la manette.`
+            ? `Bravo ! ${score} points. Vous gagnez un bon d'achat de ${PRIZE.amount} € : confirmez votre email sur la manette.`
             : `${score} points. La Méga-Carie a gagné cette fois… Merci d'avoir joué !`;
           backTimer = setTimeout(attract, won ? 60000 : 12000);
         },
@@ -717,7 +710,7 @@
       });
       socket.on('queue', ({ queue, current: cur, prizesLeft }) => {
         const next = queue.length ? `PROCHAIN : ${esc(queue[0]).toUpperCase()}${queue.length > 1 ? ` +${queue.length - 1}` : ''}` : 'PERSONNE EN ATTENTE';
-        $('ca-r-queue').innerHTML = `${cur ? `EN JEU : ${esc(cur).toUpperCase()}<br>` : ''}${next}<br>${prizesLeft} REPLAYS À GAGNER`;
+        $('ca-r-queue').innerHTML = `${cur ? `EN JEU : ${esc(cur).toUpperCase()}<br>` : ''}${next}<br>${prizesLeft} BONS D'ACHAT À GAGNER`;
       });
       socket.on('game:ready', ({ gameId, name }) => {
         current = { gameId, name };
@@ -855,15 +848,10 @@
       logoutIn(12, 'ca-end-count', 'Joueur suivant');
       return;
     }
-    $('ca-end-p').textContent = `Bravo ! ${score} points. Choisissez votre replay offert :`;
-    $('ca-rws').innerHTML = REWARDS.map((r) => `<button type="button" class="ca-rw" data-id="${r.id}"><span class="w">${esc(r.speaker.toUpperCase())}</span><span class="t">${esc(r.title)}</span></button>`).join('');
-    $('ca-rws').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
-      reward = REWARDS.find((r) => r.id === b.dataset.id);
-      $('ca-rws').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
-      $('ca-send').disabled = false;
-    }));
-    reward = null;
-    $('ca-send').disabled = true;
+    $('ca-end-p').textContent = `Bravo ! ${score} points. Vous gagnez :`;
+    $('ca-rws').innerHTML = prizeCards + '<p class="ca-p">Confirmez l’email de votre compte Capsule : l’équipe vous y envoie votre code.</p>';
+    reward = PRIZE;
+    $('ca-send').disabled = false;
     $('ca-win').hidden = false;
     $('ca-next').hidden = true;
     // Le gagnant a 2 minutes pour valider, puis la borne se libère.
@@ -876,14 +864,14 @@
     $('ca-body').value = [
       TESTER ? '[COMPTE TEST — ne pas créer de code]' : 'NOUVEAU GAGNANT — ORTHO INVADERS',
       last.seconds < 90 ? '⚠ PARTIE ANORMALEMENT COURTE (moins de 90 s) : vérifier avant de créer le code.' : 'Durée de partie normale.',
-      `Replay choisi : ${reward.title} (${reward.speaker})`,
+      `Gain : ${reward.title}`,
       `Email déclaré : ${$('ca-email').value}`,
       `Compte client Shopify : ${customerId}`,
       `Score : ${last.score} · Durée de la partie : ${last.seconds} s · Vague : ${last.wave}`,
       `Date : ${when}`,
       `Appareil : ${matchMedia('(pointer: coarse)').matches ? 'tactile (tablette du stand ou mobile)' : 'ordinateur'}`,
       '',
-      'À faire : Réductions > Créer > Montant de réduction sur les produits, 100 %, produit = replay choisi,',
+      `À faire : Réductions > Créer > Montant de réduction sur la commande, montant fixe ${reward.amount} €,`,
       'Admissibilité = ce client uniquement, Limite = 1 utilisation. Puis envoyer le code au gagnant.',
     ].join('\n');
     if (!TESTER) store.set(WON_KEY, reward.id);

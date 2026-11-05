@@ -1798,12 +1798,9 @@ window.__orthoInvadersGame = function () {
     BORNE_TAG: 'BorneJo2026',
     // Comptes de test Capsule (identifiants clients Shopify) : parties illimitées, pas de déconnexion auto.
     TESTERS: ['23773949821273', '23276575129945', '23130642612569', '23662288142681', '23394139406681'],
-    // price : valeur de secours en € ; le prix réel est relu sur la fiche produit (url, jamais affichée).
+    // Lot unique : bon d'achat (montant en €) à valoir sur capsule-med.com.
     REWARDS: [
-      { id: 'biomecanique', speaker: 'Dr Skander Ellouze', title: 'Replay Biomécanique : maîtriser les clés de l’excellence en orthodontie',
-        url: '/products/replay-biomecanique-maitriser-les-cles-de-lexcellence-en-orthodontie', price: 900 },
-      { id: 'contentions', speaker: 'Dr Philippides', title: 'Replay Adieu les urgences : maîtriser le collage des contentions',
-        url: '/products/replay-adieu-les-urgences-maitriser-le-collage-des-contentions', price: 249 },
+      { id: 'bon500', amount: 500, label: 'BON D’ACHAT · 500 € OFFERT', title: 'Bon d’achat de 500 € à valoir sur les formations Capsule' },
     ],
   };
 
@@ -2298,16 +2295,7 @@ window.__orthoInvadersGame = function () {
       try { Object.keys(localStorage).filter((k) => k.startsWith('orthoInvaders')).forEach((k) => localStorage.removeItem(k)); } catch {}
     }
     const acc = $('mp-acc');
-    const euros = (n) => `${Number(n).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} €`;
-    const prices = {};
-    CFG.REWARDS.forEach((r) => {
-      prices[r.id] = r.price;
-      fetch(`${r.url}.js`).then((res) => (res.ok ? res.json() : null)).then((prod) => {
-        if (!prod || !Number.isFinite(prod.price)) return;
-        prices[r.id] = prod.price / 100;
-        acc.querySelectorAll(`[data-price="${r.id}"]`).forEach((el) => { el.textContent = euros(prices[r.id]); });
-      }).catch(() => {});
-    });
+    const PRIZE = CFG.REWARDS[0];
     let tvMode = false;
     let view = null;
     let countdown = null;
@@ -2327,7 +2315,7 @@ window.__orthoInvadersGame = function () {
       tick();
       countdown = setInterval(tick, 1000);
     }
-    const prizeList = () => CFG.REWARDS.map((r) => `<div class="mp-prize"><b>${esc(r.speaker.toUpperCase())} · <span data-price="${r.id}">${euros(prices[r.id])}</span> OFFERT</b><span>${esc(r.title)}</span></div>`).join('');
+    const prizeList = () => CFG.REWARDS.map((r) => `<div class="mp-prize"><b>${esc(r.label)}</b><span>${esc(r.title)}</span></div>`).join('');
     const nextBtns = () => `${tester ? '<button type="button" class="mp-btn alt" data-act="replay">↻ Rejouer (compte test)</button>' : ''}
       <button type="button" class="mp-btn" data-act="logout">▶ Joueur suivant</button><p class="mp-count"></p>`;
 
@@ -2372,15 +2360,15 @@ window.__orthoInvadersGame = function () {
         <button type="button" class="mp-link" data-act="logout">Ce n'est pas moi : changer de joueur</button>`,
       played: () => `<p class="mp-h">DÉJÀ JOUÉ</p><p class="mp-p">Vous avez déjà joué votre partie. Merci et à bientôt sur capsule-med.com !</p>${nextBtns()}`,
       lose: () => `<p class="mp-h">GAME OVER</p><p class="mp-p">${result.score} points. La Méga-Carie a gagné cette fois… Merci d'avoir joué !</p>${nextBtns()}`,
-      win: () => `<p class="mp-h">★ VICTOIRE ★</p><p class="mp-p">Bravo ! ${result.score} points. Choisissez votre replay offert :</p>
-        ${CFG.REWARDS.map((r) => `<button type="button" class="mp-prize" data-rw="${r.id}"><b>${esc(r.speaker.toUpperCase())} · <span data-price="${r.id}">${euros(prices[r.id])}</span></b><span>${esc(r.title)}</span></button>`).join('')}
+      win: () => `<p class="mp-h">★ VICTOIRE ★</p><p class="mp-p">Bravo ! ${result.score} points. Vous gagnez :</p>${prizeList()}
+        <p class="mp-p" style="font-size:20px">Confirmez l’email de votre compte Capsule : l’équipe vous y envoie votre code.</p>
         <form class="mp-v" method="post" action="/contact#contact_form" accept-charset="UTF-8" id="mp-win">
           <input type="hidden" name="form_type" value="contact"><input type="hidden" name="utf8" value="✓">
           <input type="hidden" name="contact[name]" value="Gagnant Ortho Invaders"><input type="hidden" name="contact[body]" id="mp-body">
           <label>VOTRE EMAIL DE COMPTE CAPSULE<input type="email" name="contact[email]" id="mp-wem" autocomplete="email" required></label>
           <button class="mp-btn" type="submit" id="mp-send" disabled>Valider mon gain</button>
         </form><p class="mp-count"></p>`,
-      thanks: () => `<p class="mp-h">GAIN ENREGISTRÉ</p><p class="mp-p">L'équipe Capsule vous envoie par email votre code personnel pour « ${esc(result.reward.title)} ».</p>${nextBtns()}`,
+      thanks: () => `<p class="mp-h">GAIN ENREGISTRÉ</p><p class="mp-p">L'équipe Capsule vous envoie par email votre code personnel : ${esc(PRIZE.title.charAt(0).toLowerCase() + PRIZE.title.slice(1))}.</p>${nextBtns()}`,
     };
     const PS = { guest: 'guest', register: 'guest', login: 'guest', ready: 'ready' };
 
@@ -2443,13 +2431,9 @@ window.__orthoInvadersGame = function () {
     }
 
     function bindWin() {
-      let reward = null;
+      const reward = PRIZE;
       countTo(180, 'Déconnexion automatique');
-      acc.querySelectorAll('[data-rw]').forEach((b) => b.addEventListener('click', () => {
-        reward = CFG.REWARDS.find((r) => r.id === b.dataset.rw);
-        acc.querySelectorAll('[data-rw]').forEach((x) => x.classList.toggle('on', x === b));
-        $('mp-send').disabled = false;
-      }));
+      $('mp-send').disabled = false;
       const form = auth.shield($('mp-win'));
       form.addEventListener('submit', async (e) => {
         auth.guard(e);
@@ -2458,14 +2442,14 @@ window.__orthoInvadersGame = function () {
         $('mp-body').value = [
           tester ? '[COMPTE TEST — ne pas créer de code]' : 'NOUVEAU GAGNANT — ORTHO INVADERS (borne TV du stand)',
           result.seconds < 90 ? '⚠ PARTIE ANORMALEMENT COURTE (moins de 90 s) : vérifier avant de créer le code.' : 'Durée de partie normale.',
-          `Replay choisi : ${reward.title} (${reward.speaker})`,
+          `Gain : ${reward.title}`,
           `Email déclaré : ${$('mp-wem').value}`,
           `Compte client Shopify : ${cid}`,
           `Score : ${result.score} · Durée de la partie : ${result.seconds} s · Vague : ${result.wave}`,
           `Date : ${when}`,
           'Appareil : grand écran du stand + téléphone-manette',
           '',
-          'À faire : Réductions > Créer > Montant de réduction sur les produits, 100 %, produit = replay choisi,',
+          `À faire : Réductions > Créer > Montant de réduction sur la commande, montant fixe ${reward.amount} €,`,
           'Admissibilité = ce client uniquement, Limite = 1 utilisation. Puis envoyer le code au gagnant.',
         ].join('\n');
         $('mp-send').disabled = true;
@@ -2722,10 +2706,10 @@ window.__orthoInvadersGame = function () {
   style.textContent = css;
   document.head.appendChild(style);
 
-  // Lot : conférencier et prix du replay, puis titre. Aucun lien : la borne ne laisse pas sortir du jeu.
-  const euros = (n) => `${Number(n).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} €`;
+  // Lot : bon d'achat (aucun lien : la borne ne laisse pas sortir du jeu).
+  const PRIZE = REWARDS[0];
   const prizeCards = REWARDS.map((r) => `<div class="ca-prize">
-    <span class="w">${esc(r.speaker.toUpperCase())} · <span data-price="${r.id}">${euros(r.price)}</span> OFFERT</span>
+    <span class="w">${esc(r.label)}</span>
     <span class="t">${esc(r.title)}</span></div>`).join('');
   const back = encodeURIComponent(PAGE);
 
@@ -2741,7 +2725,7 @@ window.__orthoInvadersGame = function () {
         <!-- Écran TV : accueil (le joueur s'inscrit et joue avec le téléphone-manette) -->
         <div class="ca-ov" id="ca-tv" hidden><div class="ca-card">
           <p class="ca-t big ca-blink">INSERT<br>COIN</p>
-          <p class="ca-p">Protégez l'arcade dentaire, battez la <b>Méga-Carie</b> et gagnez un <b>replay de formation</b>.</p>
+          <p class="ca-p">Protégez l'arcade dentaire, battez la <b>Méga-Carie</b> et gagnez un <b>bon d'achat de ${PRIZE.amount} €</b> sur les formations Capsule.</p>
           <p class="ca-h">★ À GAGNER ★</p>
           <div class="ca-prizes">${prizeCards}</div>
           <p class="ca-p ca-tv-msg" id="ca-tv-msg">Prenez la manette : inscrivez-vous ou connectez-vous avec votre compte Capsule, puis jouez !</p>
@@ -2753,7 +2737,7 @@ window.__orthoInvadersGame = function () {
         </div></div>
         <div class="ca-ov" id="ca-coin"><div class="ca-card">
           <p class="ca-t big ca-blink">INSERT<br>COIN</p>
-          <p class="ca-p">Protégez l'arcade dentaire, battez la <b>Méga-Carie</b> et gagnez un <b>replay de formation</b>.</p>
+          <p class="ca-p">Protégez l'arcade dentaire, battez la <b>Méga-Carie</b> et gagnez un <b>bon d'achat de ${PRIZE.amount} €</b> sur les formations Capsule.</p>
           <p class="ca-h">★ À GAGNER ★</p>
           <div class="ca-prizes">${prizeCards}</div>
           <p class="ca-p" style="font-size:4.4cqw">Jeu gratuit réservé aux praticiens inscrits sur Capsule.</p>
@@ -2814,7 +2798,7 @@ window.__orthoInvadersGame = function () {
         <!-- Connecté : prêt à jouer -->
         <div class="ca-ov" id="ca-start" hidden><div class="ca-card">
           <p class="ca-t big">PRÊT,<br>DOCTEUR ?</p>
-          <p class="ca-p">3 vagues, puis la <b>Méga-Carie</b>. Battez-la et choisissez votre replay offert. <b>Une seule partie par participant</b> : concentrez-vous !</p>
+          <p class="ca-p">3 vagues, puis la <b>Méga-Carie</b>. Battez-la et gagnez un bon d'achat de ${PRIZE.amount} €. <b>Une seule partie par participant</b> : concentrez-vous !</p>
           <div class="ca-prizes">${prizeCards}</div>
           <button type="button" class="ca-btn" id="ca-play">▶ Jouer</button>
         </div></div>
@@ -2906,13 +2890,6 @@ window.__orthoInvadersGame = function () {
   window.__orthoInvadersGame();
 
   const $ = (id) => document.getElementById(id);
-  // Prix à jour depuis Shopify (fiche produit en JSON, même domaine) ; on garde la valeur de secours sinon.
-  REWARDS.forEach((r) => {
-    fetch(`${r.url}.js`).then((res) => (res.ok ? res.json() : null)).then((prod) => {
-      if (!prod || !Number.isFinite(prod.price)) return;
-      root.querySelectorAll(`[data-price="${r.id}"]`).forEach((el) => { el.textContent = euros(prod.price / 100); });
-    }).catch(() => {});
-  });
   // Boutons tactiles : écran tactile détecté, ou borne du stand (?borne). Les bornes Windows tactiles
   // annoncent souvent un pointeur « fin » (souris) : on affiche quand même la manette tactile.
   if (STAND || matchMedia('(any-pointer: coarse)').matches) root.querySelector('.ca').classList.add('touch');
@@ -3141,7 +3118,7 @@ window.__orthoInvadersGame = function () {
           show('ca-tv-end');
           $('ca-tv-end-t').textContent = won ? '★ VICTOIRE ★' : 'GAME OVER';
           $('ca-tv-end-p').textContent = won
-            ? `Bravo ! ${score} points. Choisissez votre replay offert sur la manette.`
+            ? `Bravo ! ${score} points. Vous gagnez un bon d'achat de ${PRIZE.amount} € : confirmez votre email sur la manette.`
             : `${score} points. La Méga-Carie a gagné cette fois… Merci d'avoir joué !`;
           backTimer = setTimeout(attract, won ? 60000 : 12000);
         },
@@ -3241,7 +3218,7 @@ window.__orthoInvadersGame = function () {
       });
       socket.on('queue', ({ queue, current: cur, prizesLeft }) => {
         const next = queue.length ? `PROCHAIN : ${esc(queue[0]).toUpperCase()}${queue.length > 1 ? ` +${queue.length - 1}` : ''}` : 'PERSONNE EN ATTENTE';
-        $('ca-r-queue').innerHTML = `${cur ? `EN JEU : ${esc(cur).toUpperCase()}<br>` : ''}${next}<br>${prizesLeft} REPLAYS À GAGNER`;
+        $('ca-r-queue').innerHTML = `${cur ? `EN JEU : ${esc(cur).toUpperCase()}<br>` : ''}${next}<br>${prizesLeft} BONS D'ACHAT À GAGNER`;
       });
       socket.on('game:ready', ({ gameId, name }) => {
         current = { gameId, name };
@@ -3379,15 +3356,10 @@ window.__orthoInvadersGame = function () {
       logoutIn(12, 'ca-end-count', 'Joueur suivant');
       return;
     }
-    $('ca-end-p').textContent = `Bravo ! ${score} points. Choisissez votre replay offert :`;
-    $('ca-rws').innerHTML = REWARDS.map((r) => `<button type="button" class="ca-rw" data-id="${r.id}"><span class="w">${esc(r.speaker.toUpperCase())}</span><span class="t">${esc(r.title)}</span></button>`).join('');
-    $('ca-rws').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
-      reward = REWARDS.find((r) => r.id === b.dataset.id);
-      $('ca-rws').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
-      $('ca-send').disabled = false;
-    }));
-    reward = null;
-    $('ca-send').disabled = true;
+    $('ca-end-p').textContent = `Bravo ! ${score} points. Vous gagnez :`;
+    $('ca-rws').innerHTML = prizeCards + '<p class="ca-p">Confirmez l’email de votre compte Capsule : l’équipe vous y envoie votre code.</p>';
+    reward = PRIZE;
+    $('ca-send').disabled = false;
     $('ca-win').hidden = false;
     $('ca-next').hidden = true;
     // Le gagnant a 2 minutes pour valider, puis la borne se libère.
@@ -3400,14 +3372,14 @@ window.__orthoInvadersGame = function () {
     $('ca-body').value = [
       TESTER ? '[COMPTE TEST — ne pas créer de code]' : 'NOUVEAU GAGNANT — ORTHO INVADERS',
       last.seconds < 90 ? '⚠ PARTIE ANORMALEMENT COURTE (moins de 90 s) : vérifier avant de créer le code.' : 'Durée de partie normale.',
-      `Replay choisi : ${reward.title} (${reward.speaker})`,
+      `Gain : ${reward.title}`,
       `Email déclaré : ${$('ca-email').value}`,
       `Compte client Shopify : ${customerId}`,
       `Score : ${last.score} · Durée de la partie : ${last.seconds} s · Vague : ${last.wave}`,
       `Date : ${when}`,
       `Appareil : ${matchMedia('(pointer: coarse)').matches ? 'tactile (tablette du stand ou mobile)' : 'ordinateur'}`,
       '',
-      'À faire : Réductions > Créer > Montant de réduction sur les produits, 100 %, produit = replay choisi,',
+      `À faire : Réductions > Créer > Montant de réduction sur la commande, montant fixe ${reward.amount} €,`,
       'Admissibilité = ce client uniquement, Limite = 1 utilisation. Puis envoyer le code au gagnant.',
     ].join('\n');
     if (!TESTER) store.set(WON_KEY, reward.id);
