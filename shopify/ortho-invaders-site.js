@@ -1,4 +1,4 @@
-/* Ortho Invaders — Capsule · build 2026-11-04 */
+/* Ortho Invaders — Capsule · build 2026-11-05 */
 // Pixel art de ORTHO INVADERS — chaque caractère = 1 pixel, '.' = transparent.
 (function () {
   const PALETTE = {
@@ -2752,7 +2752,9 @@ window.__orthoInvadersGame = function () {
       root.querySelectorAll(`[data-price="${r.id}"]`).forEach((el) => { el.textContent = euros(prod.price / 100); });
     }).catch(() => {});
   });
-  if (matchMedia('(pointer: coarse)').matches) root.querySelector('.ca').classList.add('touch');
+  // Boutons tactiles : écran tactile détecté, ou borne du stand (?borne). Les bornes Windows tactiles
+  // annoncent souvent un pointeur « fin » (souris) : on affiche quand même la manette tactile.
+  if (STAND || matchMedia('(any-pointer: coarse)').matches) root.querySelector('.ca').classList.add('touch');
   // ── Plein écran (masque la barre d'adresse et les onglets du navigateur) ──
   const docEl = document.documentElement;
   const fsSupported = Boolean(docEl.requestFullscreen || docEl.webkitRequestFullscreen);
